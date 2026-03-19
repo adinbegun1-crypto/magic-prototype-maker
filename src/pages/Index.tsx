@@ -111,6 +111,7 @@ export default function Index() {
             {activeTab === "Managed"   && <ManagedTab />}
             {activeTab === "Savings"   && <SavingsTab />}
             {activeTab === "Activity"  && <ActivityTab />}
+            {activeTab === "Stocks"    && <StockSearch />}
           </>
         )}
 
