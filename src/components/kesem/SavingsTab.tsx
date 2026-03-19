@@ -279,10 +279,13 @@ export function SavingsTab() {
 
   return (
     <div className="animate-fade-up space-y-2.5">
+      {/* Interest account banner */}
+      <InterestBanner />
+
       {/* Summary card */}
       <div className="bg-card rounded-2xl px-5 py-4 shadow-sm">
         <div className="flex justify-between items-center mb-3">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Total Savings</p>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Total Savings Goals</p>
           <p className="text-xs text-muted-foreground">{goals.length} goals</p>
         </div>
         <p className="font-display text-[28px] text-foreground tracking-tight">
