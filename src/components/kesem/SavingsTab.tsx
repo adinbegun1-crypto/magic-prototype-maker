@@ -1,6 +1,36 @@
 import { useState } from "react";
 import { mockData, SavingsGoal } from "@/data/kesemData";
 
+// ── Interest account banner ──────────────────────────────────────────────────
+function InterestBanner() {
+  const { interestRate, interestEarnedMonth, balance } = mockData.kesemCash;
+  return (
+    <div
+      className="rounded-2xl px-5 py-4 shadow-sm flex items-center justify-between"
+      style={{ background: "hsl(var(--primary))" }}
+    >
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-0.5">
+          Kesem Cash · Interest
+        </p>
+        <p className="text-white font-display text-[22px] tracking-tight">
+          {interestRate}% <span className="text-sm font-sans font-normal opacity-70">p.a.</span>
+        </p>
+        <p className="text-white/60 text-xs mt-0.5">
+          Earned this month: <span className="text-white font-semibold">₪{interestEarnedMonth}</span>
+        </p>
+      </div>
+      <div className="text-right">
+        <p className="text-[11px] text-white/60 mb-0.5">Account balance</p>
+        <p className="text-white font-semibold text-[17px]">
+          ₪{balance.toLocaleString("en-IL", { minimumFractionDigits: 2 })}
+        </p>
+        <p className="text-[10px] text-white/40 mt-0.5">Earns daily, paid monthly</p>
+      </div>
+    </div>
+  );
+}
+
 const EMOJIS = ["🏠", "✈️", "🛡️", "🚗", "📚", "💍", "🎓", "🌴", "💻", "👶"];
 
 function GoalCard({
