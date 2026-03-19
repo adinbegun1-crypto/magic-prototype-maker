@@ -1,5 +1,28 @@
 import { useState } from "react";
 import { managedFunds, type Fund } from "@/data/kesemData";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function generateGrowthData(expectedLow: number, months = 12, startValue = 1000) {
+  const data = [];
+  let value = startValue;
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  for (let i = 0; i < months; i++) {
+    const monthlyReturn = expectedLow / 100 / 12;
+    const noise = (Math.random() - 0.45) * (monthlyReturn * 1.8);
+    value = value * (1 + monthlyReturn + noise);
+    data.push({ month: monthNames[i], value: parseFloat(value.toFixed(0)) });
+  }
+  return data;
+}
 
 function AllocationBar({ allocation }: { allocation: Fund["allocation"] }) {
   return (
@@ -25,6 +48,18 @@ function RiskDots({ risk, color }: { risk: number; color: string }) {
   );
 }
 
+// ── Growth chart tooltip ──────────────────────────────────────────────────────
+function GrowthTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-card border border-border rounded-xl px-3 py-2 shadow-lg">
+      <p className="text-[10px] text-muted-foreground mb-0.5">{label}</p>
+      <p className="text-sm font-bold text-foreground">₪{payload[0].value.toLocaleString()}</p>
+    </div>
+  );
+}
+
+// ── Fund List ─────────────────────────────────────────────────────────────────
 function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   return (
     <>
@@ -35,71 +70,99 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
       </p>
 
       <div className="space-y-3">
-        {managedFunds.map((fund) => (
-          <div
-            key={fund.name}
-            onClick={() => onSelect(fund)}
-            className="bg-card rounded-2xl p-5 cursor-pointer border-2 border-transparent
-                       hover:border-primary-mid transition-all duration-200 shadow-sm
-                       hover:shadow-md"
-          >
-            <div className="flex justify-between items-start mb-3.5">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: fund.color }} />
-                  <span className="text-[15px] font-semibold text-foreground">{fund.name}</span>
-                  <span className="text-xs text-muted-foreground font-serif">{fund.nameHe}</span>
-                </div>
-                <p className="text-xs text-muted-foreground max-w-[210px] leading-relaxed">
-                  {fund.description}
-                </p>
-              </div>
-              <div className="text-right ml-2 shrink-0">
-                <p className="text-[15px] font-bold" style={{ color: fund.color }}>
-                  {fund.expectedReturn}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">est. / yr</p>
-              </div>
-            </div>
+        {managedFunds.map((fund) => {
+          const low = parseInt(fund.expectedReturn.split("–")[0]);
+          const chartData = generateGrowthData(low);
 
-            <AllocationBar allocation={fund.allocation} />
-            <div className="flex gap-3 mt-2.5 mb-3.5">
-              {fund.allocation.map((a) => (
-                <div key={a.label} className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: a.color }} />
-                  <span className="text-[10px] text-muted-foreground">{a.label} {a.pct}%</span>
+          return (
+            <div
+              key={fund.name}
+              onClick={() => onSelect(fund)}
+              className="bg-card rounded-2xl p-5 cursor-pointer border-2 border-transparent
+                         hover:border-primary-mid transition-all duration-200 shadow-sm hover:shadow-md"
+            >
+              {/* Top row */}
+              <div className="flex justify-between items-start mb-3.5">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: fund.color }} />
+                    <span className="text-[15px] font-semibold text-foreground">{fund.name}</span>
+                    <span className="text-xs text-muted-foreground font-serif">{fund.nameHe}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground max-w-[210px] leading-relaxed">
+                    {fund.description}
+                  </p>
                 </div>
-              ))}
-            </div>
-
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Risk</span>
-                <RiskDots risk={fund.risk} color={fund.color} />
+                <div className="text-right ml-2 shrink-0">
+                  <p className="text-[15px] font-bold" style={{ color: fund.color }}>
+                    {fund.expectedReturn}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">est. / yr</p>
+                </div>
               </div>
-              <span
-                className="text-xs font-semibold px-3 py-1 rounded-full"
-                style={{ color: fund.color, background: fund.color + "18" }}
-              >
-                Invest →
-              </span>
+
+              {/* Growth chart */}
+              <div className="mb-3" style={{ height: 70 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id={`grad-${fund.name}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={fund.color} stopOpacity={0.25} />
+                        <stop offset="100%" stopColor={fund.color} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke={fund.color}
+                      strokeWidth={1.5}
+                      fill={`url(#grad-${fund.name})`}
+                      dot={false}
+                    />
+                    <XAxis dataKey="month" hide />
+                    <YAxis hide domain={["auto", "auto"]} />
+                    <Tooltip content={<GrowthTooltip />} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              <AllocationBar allocation={fund.allocation} />
+              <div className="flex gap-3 mt-2.5 mb-3.5">
+                {fund.allocation.map((a) => (
+                  <div key={a.label} className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: a.color }} />
+                    <span className="text-[10px] text-muted-foreground">{a.label} {a.pct}%</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">Risk</span>
+                  <RiskDots risk={fund.risk} color={fund.color} />
+                </div>
+                <span
+                  className="text-xs font-semibold px-3 py-1 rounded-full"
+                  style={{ color: fund.color, background: fund.color + "18" }}
+                >
+                  Invest →
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );
 }
 
-function FundDetail({
-  fund,
-  onBack,
-}: {
-  fund: Fund;
-  onBack: () => void;
-}) {
+// ── Fund Detail ───────────────────────────────────────────────────────────────
+function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const [amount, setAmount] = useState("1000");
   const [confirmed, setConfirmed] = useState(false);
+
+  const low = parseInt(fund.expectedReturn.split("–")[0]);
+  const chartData = generateGrowthData(low, 12, parseInt(amount) || 1000);
 
   if (confirmed) {
     return (
@@ -116,7 +179,7 @@ function FundDetail({
             <p className="text-[11px] text-muted-foreground uppercase tracking-widest mb-1">
               Annual management fee
             </p>
-            <p className="text-[22px] font-bold text-primary">
+            <p className="text-[22px] font-bold" style={{ color: "hsl(var(--primary))" }}>
               ₪{(parseInt(amount) * 0.005).toFixed(0)} / year
             </p>
             <p className="text-[11px] text-muted-foreground mt-1">That's it. No hidden charges.</p>
@@ -125,7 +188,7 @@ function FundDetail({
             <p className="text-[11px] text-muted-foreground uppercase tracking-widest mb-1">
               Expected return (est.)
             </p>
-            <p className="text-[22px] font-bold text-primary-mid">{fund.expectedReturn} / yr</p>
+            <p className="text-[22px] font-bold" style={{ color: fund.color }}>{fund.expectedReturn} / yr</p>
             <p className="text-[11px] text-muted-foreground mt-1">
               Based on historical performance. Not a guarantee.
             </p>
@@ -134,7 +197,8 @@ function FundDetail({
 
         <button
           onClick={onBack}
-          className="w-full py-4 bg-primary-mid text-white rounded-2xl text-sm font-semibold"
+          className="w-full py-4 text-white rounded-2xl text-sm font-semibold"
+          style={{ background: "hsl(var(--primary-mid))" }}
         >
           View All Funds
         </button>
@@ -156,7 +220,37 @@ function FundDetail({
           <div className="w-2.5 h-2.5 rounded-full" style={{ background: fund.color }} />
           <h3 className="text-[17px] font-semibold text-foreground">{fund.name} Fund</h3>
         </div>
-        <p className="text-xs text-muted-foreground mb-5 leading-relaxed">{fund.description}</p>
+        <p className="text-xs text-muted-foreground mb-4 leading-relaxed">{fund.description}</p>
+
+        {/* Projected growth chart */}
+        <div className="mb-4">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">
+            Projected growth on ₪{parseInt(amount).toLocaleString()} · 12 months
+          </p>
+          <div style={{ height: 100 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id={`grad-detail-${fund.name}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={fund.color} stopOpacity={0.3} />
+                    <stop offset="100%" stopColor={fund.color} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke={fund.color}
+                  strokeWidth={2}
+                  fill={`url(#grad-detail-${fund.name})`}
+                  dot={false}
+                />
+                <XAxis dataKey="month" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                <YAxis hide domain={["auto", "auto"]} />
+                <Tooltip content={<GrowthTooltip />} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
         <p className="text-xs text-muted-foreground font-medium mb-2.5">
           How much would you like to invest?
@@ -168,8 +262,8 @@ function FundDetail({
               onClick={() => setAmount(amt)}
               className="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150"
               style={{
-                background: amount === amt ? fund.color : "#F4F4F0",
-                color: amount === amt ? "white" : "#666",
+                background: amount === amt ? fund.color : "hsl(var(--secondary))",
+                color: amount === amt ? "white" : "hsl(var(--muted-foreground))",
               }}
             >
               ₪{parseInt(amt).toLocaleString()}
@@ -180,8 +274,8 @@ function FundDetail({
         <div className="bg-background rounded-xl p-4 mb-5 space-y-2.5">
           {([
             ["Expected annual return", fund.expectedReturn, fund.color],
-            ["Annual fee (0.5%)", `₪${(parseInt(amount) * 0.005).toFixed(0)}`, "#1a1a1a"],
-            ["Strategy", fund.allocation.map((a) => a.label).join(" · "), "#888"],
+            ["Annual fee (0.5%)", `₪${(parseInt(amount) * 0.005).toFixed(0)}`, "hsl(var(--foreground))"],
+            ["Strategy", fund.allocation.map((a) => a.label).join(" · "), "hsl(var(--muted-foreground))"],
           ] as [string, string, string][]).map(([label, val, color]) => (
             <div key={label} className="flex justify-between items-center text-xs">
               <span className="text-muted-foreground">{label}</span>
@@ -190,15 +284,7 @@ function FundDetail({
           ))}
           <div className="flex justify-between items-center text-xs">
             <span className="text-muted-foreground">Risk level</span>
-            <div className="flex gap-1">
-              {[1, 2, 3].map((n) => (
-                <div
-                  key={n}
-                  className="w-4.5 h-1.5 rounded-full"
-                  style={{ background: n <= fund.risk ? fund.color : "#DDD" }}
-                />
-              ))}
-            </div>
+            <RiskDots risk={fund.risk} color={fund.color} />
           </div>
         </div>
 
@@ -214,6 +300,7 @@ function FundDetail({
   );
 }
 
+// ── Export ────────────────────────────────────────────────────────────────────
 export function ManagedTab() {
   const [selectedFund, setSelectedFund] = useState<Fund | null>(null);
 
