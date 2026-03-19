@@ -8,8 +8,9 @@ import { ActivityTab } from "@/components/kesem/ActivityTab";
 import { AdviceTab } from "@/components/kesem/AdviceTab";
 import { ProfileScreen } from "@/components/kesem/ProfileScreen";
 import { KesemCashCard } from "@/components/kesem/KesemCashCard";
+import { StockSearch } from "@/components/kesem/StockSearch";
 
-const TABS = ["Portfolio", "Managed", "Savings", "Activity"] as const;
+const TABS = ["Portfolio", "Managed", "Savings", "Activity", "Stocks"] as const;
 type Tab = (typeof TABS)[number];
 
 type Screen = "invest" | "cash" | "advice" | "profile";
@@ -110,6 +111,7 @@ export default function Index() {
             {activeTab === "Managed"   && <ManagedTab />}
             {activeTab === "Savings"   && <SavingsTab />}
             {activeTab === "Activity"  && <ActivityTab />}
+            {activeTab === "Stocks"    && <StockSearch />}
           </>
         )}
 
