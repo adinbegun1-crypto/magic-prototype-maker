@@ -1,3 +1,49 @@
+export type ProjectedGrowthPoint = {
+  month: string;
+  value: number;
+};
+
+const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function hashSeed(input: string) {
+  let hash = 2166136261;
+  for (const char of input) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createSeededRandom(seed: string) {
+  let state = hashSeed(seed) || 1;
+
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+export function buildProjectedGrowthSeries(
+  fundName: string,
+  expectedLow: number,
+  startValue = 1000,
+  months = 12,
+): ProjectedGrowthPoint[] {
+  const seededRandom = createSeededRandom(`${fundName}:${startValue}:${months}:${expectedLow}`);
+  const monthlyReturn = expectedLow / 100 / 12;
+  let value = startValue;
+
+  return monthNames.slice(0, months).map((month) => {
+    const noise = (seededRandom() - 0.45) * (monthlyReturn * 1.8);
+    value = value * (1 + monthlyReturn + noise);
+
+    return {
+      month,
+      value: parseFloat(value.toFixed(0)),
+    };
+  });
+}
+
 export const mockData = {
   portfolio: {
     total: 48320.5,
@@ -46,6 +92,7 @@ export const managedFunds = [
     fee: "0.5%",
     risk: 1,
     color: "#74C69D",
+    projectedChartData: buildProjectedGrowthSeries("Conservative", 4),
     allocation: [
       { label: "Bonds",        pct: 70, color: "#2D6A4F" },
       { label: "Local Stocks", pct: 20, color: "#52B788" },
@@ -60,6 +107,7 @@ export const managedFunds = [
     fee: "0.5%",
     risk: 2,
     color: "#40916C",
+    projectedChartData: buildProjectedGrowthSeries("Balanced", 7),
     allocation: [
       { label: "Global ETFs",  pct: 45, color: "#2D6A4F" },
       { label: "Local Stocks", pct: 30, color: "#52B788" },
@@ -74,6 +122,7 @@ export const managedFunds = [
     fee: "0.5%",
     risk: 3,
     color: "#1B4332",
+    projectedChartData: buildProjectedGrowthSeries("Growth", 10),
     allocation: [
       { label: "Global ETFs",  pct: 55, color: "#2D6A4F" },
       { label: "Tech Stocks",  pct: 30, color: "#52B788" },
