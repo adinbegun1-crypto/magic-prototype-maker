@@ -16,6 +16,8 @@ type Tab = (typeof TABS)[number];
 
 type Screen = "invest" | "cash" | "advice" | "profile";
 
+type AuthMode = "sign-in" | "sign-up";
+
 const BOTTOM_NAV: { icon: string; label: string; screen: Screen }[] = [
   { icon: "📈", label: "Invest", screen: "invest" },
   { icon: "💳", label: "Cash", screen: "cash" },
@@ -23,7 +25,7 @@ const BOTTOM_NAV: { icon: string; label: string; screen: Screen }[] = [
   { icon: "👤", label: "Profile", screen: "profile" },
 ];
 
-export default function Index() {
+function IndexContent() {
   const [activeTab, setActiveTab] = useState<Tab>("Portfolio");
   const [activeScreen, setActiveScreen] = useState<Screen>("invest");
   const { portfolio, kesemCash } = mockData;
@@ -33,6 +35,34 @@ export default function Index() {
   const fullName = currentUser?.name ?? "Kesem Member";
   const initials = currentUser?.initials ?? "K";
   const showInvest = activeScreen === "invest";
+
+  function updateCurrentUser(updater: (user: DemoUserRecord) => DemoUserRecord) {
+    const updatedUser = updateDemoUser(profile.id, updater);
+    if (!updatedUser) return;
+
+    setCurrentUser(updatedUser);
+    setSavedUsers(listDemoUsers());
+  }
+
+  function handleResetAccount() {
+    const resetUser = resetDemoUser(profile.id);
+    if (!resetUser) return;
+
+    setCurrentUser(resetUser);
+    setSavedUsers(listDemoUsers());
+    setActiveScreen("invest");
+    setActiveTab("Portfolio");
+    toast.success(`Reset ${resetUser.profile.fullName}'s demo account.`);
+  }
+
+  function handleLogout() {
+    signOutDemoUser();
+    setCurrentUser(null);
+    setSavedUsers(listDemoUsers());
+    setActiveScreen("invest");
+    setActiveTab("Portfolio");
+    toast.success("Signed out. Your demo account is still saved on this browser.");
+  }
 
   return (
     <div className="min-h-screen bg-background flex justify-center items-start py-10 px-4">
@@ -71,19 +101,24 @@ export default function Index() {
 
               <p className="text-[12px] opacity-60 tracking-widest uppercase mb-1.5 relative z-10">Total Portfolio</p>
               <p className="font-display text-[38px] tracking-tight mb-2 relative z-10">
-                ₪{portfolio.total.toLocaleString("en-IL", { minimumFractionDigits: 2 })}
+                ₪{stockPortfolioTotal.toLocaleString("en-IL", { minimumFractionDigits: 2 })}
               </p>
               <div className="flex items-center gap-2 relative z-10">
                 <span className="bg-white/10 text-primary-pale text-xs font-semibold px-3 py-1 rounded-full">
-                  +₪{portfolio.change.toLocaleString()} ({portfolio.changePct}%)
+                  {portfolio.change >= 0 ? "+" : ""}₪
+                  {portfolio.change.toLocaleString("en-IL", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                  {` (${portfolio.changePct >= 0 ? "+" : ""}${portfolio.changePct}%)`}
                 </span>
-                <span className="text-xs opacity-50">this month</span>
+                <span className="text-xs opacity-50">based on current holdings</span>
               </div>
 
               <div className="mt-6 relative z-10">
-                <PortfolioBar items={portfolio.breakdown} />
+                <PortfolioBar items={portfolioBreakdown} />
               </div>
-              <div className="flex gap-3 mt-3 relative z-10">
+              <div className="flex gap-3 mt-3 relative z-10 flex-wrap">
                 {portfolio.breakdown.map((item) => (
                   <div key={item.ticker} className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full" style={{ background: item.color }} />
@@ -100,9 +135,13 @@ export default function Index() {
                   onClick={() => setActiveTab(tab)}
                   className="flex-1 py-2 rounded-[10px] text-xs font-medium transition-all duration-200"
                   style={{
-                    color: activeTab === tab ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                    color:
+                      activeTab === tab
+                        ? "hsl(var(--primary))"
+                        : "hsl(var(--muted-foreground))",
                     background: activeTab === tab ? "white" : "transparent",
-                    boxShadow: activeTab === tab ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                    boxShadow:
+                      activeTab === tab ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
                   }}
                 >
                   {tab}
@@ -131,7 +170,9 @@ export default function Index() {
                 onClick={() => setActiveScreen(screen)}
                 className="flex flex-col items-center gap-1 transition-all duration-200"
                 style={{
-                  color: active ? "hsl(var(--primary-mid))" : "hsl(var(--muted-foreground))",
+                  color: active
+                    ? "hsl(var(--primary-mid))"
+                    : "hsl(var(--muted-foreground))",
                   fontWeight: active ? 600 : 400,
                 }}
               >
@@ -143,5 +184,13 @@ export default function Index() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Index() {
+  return (
+    <DemoAccountProvider>
+      <IndexContent />
+    </DemoAccountProvider>
   );
 }

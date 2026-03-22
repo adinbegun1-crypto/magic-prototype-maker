@@ -3,33 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { mockData } from "@/data/kesemData";
 
-const menuSections = [
-  {
-    title: "Account",
-    items: [
-      { icon: "🪪", label: "Personal Details", sub: "Name, email, ID" },
-      { icon: "🔔", label: "Notifications", sub: "Push, email, SMS" },
-      { icon: "🔒", label: "Security", sub: "PIN, biometrics, 2FA" },
-      { icon: "🏦", label: "Linked Bank Account", sub: "Bank Hapoalim ••4821" },
-    ],
-  },
-  {
-    title: "Preferences",
-    items: [
-      { icon: "🌍", label: "Language", sub: "English" },
-      { icon: "💱", label: "Currency", sub: "₪ Israeli Shekel" },
-      { icon: "📊", label: "Risk Profile", sub: "Balanced" },
-    ],
-  },
-  {
-    title: "Support",
-    items: [
-      { icon: "💬", label: "Chat with us", sub: "Avg. reply in 2 min" },
-      { icon: "📄", label: "Documents & Tax", sub: "Statements, reports" },
-      { icon: "ℹ️", label: "About Kesem", sub: "Version 1.0.0" },
-    ],
-  },
-];
+const supportSection = {
+  title: "Support",
+  items: [
+    { icon: "💬", label: "Chat with us", sub: "Avg. reply in 2 min" },
+    { icon: "📄", label: "Documents & Tax", sub: "Statements, reports" },
+    { icon: "ℹ️", label: "About Kesem", sub: "Version 1.0.0" },
+  ],
+};
 
 export function ProfileScreen() {
   const [notificationsOn, setNotificationsOn] = useState(true);
@@ -56,7 +37,7 @@ export function ProfileScreen() {
               {currentUser?.mode === "demo" ? "Demo Mode" : "Verified ✓"}
             </span>
             <span className="bg-secondary text-muted-foreground text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
-              Balanced investor
+              {profile.riskProfile} investor
             </span>
           </div>
         </div>
@@ -87,13 +68,15 @@ export function ProfileScreen() {
           </div>
         </div>
         <button
-          onClick={() => setNotificationsOn((v) => !v)}
+          onClick={toggleNotifications}
           className="relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0"
-          style={{ background: notificationsOn ? "hsl(var(--primary-mid))" : "hsl(var(--muted))" }}
+          style={{
+            background: profile.notificationsEnabled ? "hsl(var(--primary-mid))" : "hsl(var(--muted))",
+          }}
         >
           <span
             className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-200"
-            style={{ left: notificationsOn ? "calc(100% - 22px)" : "2px" }}
+            style={{ left: profile.notificationsEnabled ? "calc(100% - 22px)" : "2px" }}
           />
         </button>
       </div>
@@ -113,7 +96,9 @@ export function ProfileScreen() {
                 <span className="text-base w-6 text-center">{item.icon}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.sub}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.label === "Risk Profile" ? profile.riskProfile : item.sub}
+                  </p>
                 </div>
                 <span className="text-muted-foreground text-xs">›</span>
               </button>

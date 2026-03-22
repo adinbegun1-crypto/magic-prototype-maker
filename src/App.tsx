@@ -9,6 +9,7 @@ import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import { DemoPortfolioProvider } from "@/context/DemoPortfolioContext";
 
 const queryClient = new QueryClient();
 
