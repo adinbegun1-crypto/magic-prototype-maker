@@ -8,7 +8,8 @@ import { AdviceTab } from "@/components/kesem/AdviceTab";
 import { ProfileScreen } from "@/components/kesem/ProfileScreen";
 import { KesemCashCard } from "@/components/kesem/KesemCashCard";
 import { StockSearch } from "@/components/kesem/StockSearch";
-import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
+import { useAuth } from "@/context/AuthContext";
+import { mockData } from "@/data/kesemData";
 
 const TABS = ["Portfolio", "Managed", "Savings", "Activity", "Stocks"] as const;
 type Tab = (typeof TABS)[number];
@@ -27,10 +28,12 @@ const BOTTOM_NAV: { icon: string; label: string; screen: Screen }[] = [
 function IndexContent() {
   const [activeTab, setActiveTab] = useState<Tab>("Portfolio");
   const [activeScreen, setActiveScreen] = useState<Screen>("invest");
-  const { portfolio, cashAccount, profile } = useDemoPortfolio();
+  const { portfolio, kesemCash } = mockData;
+  const { currentUser } = useAuth();
 
-  const { portfolio, kesemCash, transactions, savings, profile } = currentUser;
-  const firstName = profile.fullName.split(" ")[0];
+  const firstName = currentUser?.name.split(" ")[0] ?? "Investor";
+  const fullName = currentUser?.name ?? "Kesem Member";
+  const initials = currentUser?.initials ?? "K";
   const showInvest = activeScreen === "invest";
 
   function updateCurrentUser(updater: (user: DemoUserRecord) => DemoUserRecord) {
@@ -77,18 +80,16 @@ function IndexContent() {
             </p>
             <h1 className="font-display text-[22px] text-foreground">
               {activeScreen === "invest"
-                ? `${profile.firstName} 👋`
+                ? `${firstName} 👋`
                 : activeScreen === "cash"
-                  ? `₪${cashAccount.balance.toLocaleString("en-IL", {
-                      minimumFractionDigits: 2,
-                    })}`
+                  ? `₪${kesemCash.balance.toLocaleString("en-IL", { minimumFractionDigits: 2 })}`
                   : activeScreen === "advice"
                     ? "What's new 🔍"
-                    : profile.fullName}
+                    : fullName}
             </h1>
           </div>
           <div className="w-10 h-10 rounded-full bg-primary-mid text-white flex items-center justify-center text-sm font-semibold">
-            {profile.initials}
+            {initials}
           </div>
         </div>
 
