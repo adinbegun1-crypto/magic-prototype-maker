@@ -1,54 +1,70 @@
 import { useState } from "react";
-import { mockData } from "@/data/kesemData";
+import type { DemoKesemCash, DemoPortfolio, DemoUserProfile } from "@/lib/demoAccountStorage";
 
-const menuSections = [
-  {
-    title: "Account",
-    items: [
-      { icon: "🪪", label: "Personal Details", sub: "Name, email, ID" },
-      { icon: "🔔", label: "Notifications", sub: "Push, email, SMS" },
-      { icon: "🔒", label: "Security", sub: "PIN, biometrics, 2FA" },
-      { icon: "🏦", label: "Linked Bank Account", sub: "Bank Hapoalim ••4821" },
-    ],
-  },
-  {
-    title: "Preferences",
-    items: [
-      { icon: "🌍", label: "Language", sub: "English" },
-      { icon: "💱", label: "Currency", sub: "₪ Israeli Shekel" },
-      { icon: "📊", label: "Risk Profile", sub: "Balanced" },
-    ],
-  },
-  {
-    title: "Support",
-    items: [
-      { icon: "💬", label: "Chat with us", sub: "Avg. reply in 2 min" },
-      { icon: "📄", label: "Documents & Tax", sub: "Statements, reports" },
-      { icon: "ℹ️", label: "About Kesem", sub: "Version 1.0.0" },
-    ],
-  },
-];
+const supportSection = {
+  title: "Support",
+  items: [
+    { icon: "💬", label: "Chat with us", sub: "Avg. reply in 2 min" },
+    { icon: "📄", label: "Documents & Tax", sub: "Statements, reports" },
+    { icon: "ℹ️", label: "About Kesem", sub: "Version 1.0.0" },
+  ],
+};
 
-export function ProfileScreen() {
+export function ProfileScreen({
+  profile,
+  portfolio,
+  kesemCash,
+  initials,
+  onLogout,
+  onResetAccount,
+}: {
+  profile: DemoUserProfile;
+  portfolio: DemoPortfolio;
+  kesemCash: DemoKesemCash;
+  initials: string;
+  onLogout: () => void;
+  onResetAccount: () => void;
+}) {
   const [notificationsOn, setNotificationsOn] = useState(true);
-  const { kesemCash, portfolio } = mockData;
+
+  const menuSections = [
+    {
+      title: "Account",
+      items: [
+        { icon: "🪪", label: "Personal Details", sub: `${profile.fullName} · ${profile.email}` },
+        { icon: "🔔", label: "Notifications", sub: "Push, email, SMS" },
+        { icon: "🔒", label: "Security", sub: "PIN, biometrics, 2FA" },
+        { icon: "🏦", label: "Linked Bank Account", sub: profile.linkedBankAccount },
+      ],
+    },
+    {
+      title: "Preferences",
+      items: [
+        { icon: "🌍", label: "Language", sub: profile.language },
+        { icon: "💱", label: "Currency", sub: profile.currency },
+        { icon: "📊", label: "Risk Profile", sub: profile.riskProfile },
+      ],
+    },
+    supportSection,
+  ];
 
   return (
     <div className="animate-fade-up space-y-5">
-      {/* Profile hero */}
       <div className="bg-card rounded-3xl p-5 shadow-sm flex items-center gap-4">
         <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-white text-2xl font-bold font-display flex-shrink-0">
-          A
+          {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-base font-bold text-foreground">Adin Cohen</p>
-          <p className="text-xs text-muted-foreground mt-0.5">adin@email.com</p>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="bg-primary-wash text-primary-mid text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
-              Verified ✓
-            </span>
+          <p className="text-base font-bold text-foreground">{profile.fullName}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{profile.email}</p>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {profile.verified && (
+              <span className="bg-primary-wash text-primary-mid text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
+                Verified ✓
+              </span>
+            )}
             <span className="bg-secondary text-muted-foreground text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
-              Balanced investor
+              {profile.riskProfile} investor
             </span>
           </div>
         </div>
@@ -57,21 +73,19 @@ export function ProfileScreen() {
         </button>
       </div>
 
-      {/* Stats strip */}
       <div className="grid grid-cols-3 gap-2">
         {[
           { label: "Portfolio", value: `₪${(portfolio.total / 1000).toFixed(1)}K` },
           { label: "Cash balance", value: `₪${(kesemCash.balance / 1000).toFixed(1)}K` },
-          { label: "Member since", value: "Jan 2023" },
-        ].map((s) => (
-          <div key={s.label} className="bg-card rounded-2xl p-3 text-center shadow-sm">
-            <p className="text-sm font-bold text-foreground">{s.value}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{s.label}</p>
+          { label: "Member since", value: profile.memberSince },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-card rounded-2xl p-3 text-center shadow-sm">
+            <p className="text-sm font-bold text-foreground">{stat.value}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{stat.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Notifications toggle */}
       <div className="bg-card rounded-2xl px-5 py-4 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-lg">🔔</span>
@@ -81,7 +95,7 @@ export function ProfileScreen() {
           </div>
         </div>
         <button
-          onClick={() => setNotificationsOn((v) => !v)}
+          onClick={() => setNotificationsOn((value) => !value)}
           className="relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0"
           style={{ background: notificationsOn ? "hsl(var(--primary-mid))" : "hsl(var(--muted))" }}
         >
@@ -92,7 +106,6 @@ export function ProfileScreen() {
         </button>
       </div>
 
-      {/* Menu sections */}
       {menuSections.map((section) => (
         <div key={section.title}>
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2">
@@ -117,8 +130,30 @@ export function ProfileScreen() {
         </div>
       ))}
 
-      {/* Log out */}
-      <button className="w-full py-3.5 bg-card text-destructive border border-destructive/20 rounded-2xl text-sm font-semibold hover:bg-destructive/5 transition-colors duration-200 shadow-sm">
+      <div>
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2">
+          Demo account
+        </p>
+        <div className="bg-card rounded-2xl p-4 shadow-sm space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Reset fake-money portfolio</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Restore the original demo balances, holdings, savings goals, and activity for this signed-in account.
+            </p>
+          </div>
+          <button
+            onClick={onResetAccount}
+            className="w-full py-3 bg-primary-wash text-primary-mid border border-primary-mid/20 rounded-2xl text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            Reset demo account
+          </button>
+        </div>
+      </div>
+
+      <button
+        onClick={onLogout}
+        className="w-full py-3.5 bg-card text-destructive border border-destructive/20 rounded-2xl text-sm font-semibold hover:bg-destructive/5 transition-colors duration-200 shadow-sm"
+      >
         Log out
       </button>
 

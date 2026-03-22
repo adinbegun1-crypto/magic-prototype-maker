@@ -1,15 +1,20 @@
 import { useState } from "react";
-import { mockData } from "@/data/kesemData";
+import type { Transaction } from "@/data/kesemData";
+import type { DemoKesemCash } from "@/lib/demoAccountStorage";
 
-export function KesemCashCard() {
-  const { kesemCash, transactions } = mockData;
+export function KesemCashCard({
+  kesemCash,
+  transactions,
+}: {
+  kesemCash: DemoKesemCash;
+  transactions: Transaction[];
+}) {
   const [flipped, setFlipped] = useState(false);
 
   const spendTxs = transactions.filter((t) => t.category === "spend" || t.category === "salary");
 
   return (
     <div className="space-y-3">
-      {/* Debit card */}
       <div
         className="relative rounded-3xl overflow-hidden cursor-pointer select-none"
         style={{ height: 192, perspective: 1000 }}
@@ -22,11 +27,10 @@ export function KesemCashCard() {
             transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
           }}
         >
-          {/* Front */}
           <div
             className="absolute inset-0 rounded-3xl p-6 flex flex-col justify-between"
             style={{
-              background: `linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-mid)) 100%)`,
+              background: `linear-gradient(135deg, ${kesemCash.color1} 0%, ${kesemCash.color2} 100%)`,
               backfaceVisibility: "hidden",
             }}
           >
@@ -57,11 +61,10 @@ export function KesemCashCard() {
             <p className="absolute bottom-3 right-4 text-white/20 text-[10px]">tap to flip</p>
           </div>
 
-          {/* Back */}
           <div
             className="absolute inset-0 rounded-3xl p-6 flex flex-col justify-center"
             style={{
-              background: `linear-gradient(135deg, hsl(var(--primary-mid)) 0%, hsl(var(--primary)) 100%)`,
+              background: `linear-gradient(135deg, ${kesemCash.color2} 0%, ${kesemCash.color1} 100%)`,
               backfaceVisibility: "hidden",
               transform: "rotateY(180deg)",
             }}
@@ -82,7 +85,6 @@ export function KesemCashCard() {
         </div>
       </div>
 
-      {/* Interest earned banner */}
       <div className="bg-primary-wash rounded-2xl px-5 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-base">💸</span>
@@ -94,7 +96,6 @@ export function KesemCashCard() {
         <p className="text-primary-mid font-bold text-base">+₪{kesemCash.interestEarnedMonth}</p>
       </div>
 
-      {/* Quick actions */}
       <div className="grid grid-cols-3 gap-2">
         {[
           { icon: "↑", label: "Send" },
@@ -113,14 +114,13 @@ export function KesemCashCard() {
         ))}
       </div>
 
-      {/* Recent card transactions */}
       <div className="bg-card rounded-2xl overflow-hidden shadow-sm">
         <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Recent Transactions
         </p>
         {spendTxs.map((tx, i) => (
           <div
-            key={i}
+            key={`${tx.desc}-${tx.date}-${i}`}
             className="px-5 py-3.5 flex justify-between items-center"
             style={{ borderTop: "1px solid hsl(var(--border))" }}
           >
