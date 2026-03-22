@@ -1,44 +1,66 @@
-import { useMemo, useState } from "react";
-import { useDemoAccount } from "@/context/DemoAccountContext";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
+import type { Holding } from "@/data/kesemData";
 import { MiniChart } from "./MiniChart";
 import { PortfolioBar } from "./PortfolioBar";
 
-type PortfolioHolding = ReturnType<typeof useDemoAccount>["portfolioBreakdown"][number];
-
-function HoldingSheet({ item, onClose }: { item: PortfolioHolding; onClose: () => void }) {
-  const { sellStock } = useDemoAccount();
+function HoldingSheet({ item, onClose }: { item: Holding; onClose: () => void }) {
+  const { buyStock, sellHolding } = useDemoPortfolio();
   const [sellMode, setSellMode] = useState(false);
   const [sellAmt, setSellAmt] = useState("500");
-  const [confirmed, setConfirmed] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [confirmedMessage, setConfirmedMessage] = useState<string | null>(null);
 
-  const shares = item.shares.toFixed(2);
-  const pricePerShare = item.price.toFixed(2);
-  const maxValue = item.value;
-
-  const quickValues = useMemo(
-    () => [250, 500, 1000, Math.floor(maxValue)].filter((amount, index, arr) => amount > 0 && arr.indexOf(amount) === index),
-    [maxValue],
-  );
+  const shares = item.units.toFixed(2);
+  const pricePerShare = item.unitPrice.toFixed(2);
 
   function handleSell() {
-    const result = sellStock({ ticker: item.ticker, amount: parseFloat(sellAmt) });
-    if (!result.ok) {
-      setError(result.message);
+    const result = sellHolding({
+      ticker: item.ticker,
+      amount: parseFloat(sellAmt),
+    });
+
+    if (!result.success) {
+      toast.error(result.message);
       return;
     }
-    setError(null);
-    setConfirmed(true);
+
+    setConfirmedMessage(result.message);
   }
 
-  if (confirmed) {
+  function handleBuyMore() {
+    const result = buyStock({
+      ticker: item.ticker,
+      name: item.name,
+      color: item.color,
+      amount: 500,
+      pricePerUnit: item.unitPrice,
+      change: item.change,
+    });
+
+    if (!result.success) {
+      toast.error(result.message);
+      return;
+    }
+
+    toast.success(result.message);
+    onClose();
+  }
+
+  if (confirmedMessage) {
     return (
       <div className="fixed inset-0 z-50 flex items-end justify-center p-4" style={{ background: "rgba(0,0,0,0.4)" }}>
         <div className="w-full max-w-[390px] bg-card rounded-3xl p-6 animate-fade-up shadow-2xl text-center">
           <div className="text-5xl mb-4">✅</div>
           <h2 className="font-display text-[22px] text-foreground mb-2">Sold!</h2>
-          <p className="text-sm text-muted-foreground mb-6">₪{parseFloat(sellAmt).toLocaleString()} of <strong>{item.name}</strong> sold successfully and credited back to your demo cash balance.</p>
-          <button onClick={onClose} className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white" style={{ background: "hsl(var(--primary-mid))" }}>Done</button>
+          <p className="text-sm text-muted-foreground mb-6">{confirmedMessage}</p>
+          <button
+            onClick={onClose}
+            className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white"
+            style={{ background: "hsl(var(--primary-mid))" }}
+          >
+            Done
+          </button>
         </div>
       </div>
     );
@@ -91,7 +113,13 @@ function HoldingSheet({ item, onClose }: { item: PortfolioHolding; onClose: () =
             >
               Sell
             </button>
-            <button onClick={onClose} className="flex-1 py-3.5 rounded-2xl text-sm font-semibold text-white transition-all" style={{ background: "hsl(var(--primary-mid))" }}>Close</button>
+            <button
+              onClick={handleBuyMore}
+              className="flex-1 py-3.5 rounded-2xl text-sm font-semibold text-white transition-all"
+              style={{ background: "hsl(var(--primary-mid))" }}
+            >
+              Buy more
+            </button>
           </div>
         ) : (
           <div className="animate-fade-up">
@@ -128,7 +156,13 @@ function HoldingSheet({ item, onClose }: { item: PortfolioHolding; onClose: () =
                   className="flex-1 bg-transparent text-sm text-foreground outline-none py-2.5"
                 />
               </div>
-              <button onClick={handleSell} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: "#e05252" }}>Confirm sell</button>
+              <button
+                onClick={handleSell}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
+                style={{ background: "#e05252" }}
+              >
+                Confirm sell
+              </button>
             </div>
             {error && <p className="mt-2.5 text-xs font-medium text-red-500">{error}</p>}
             <button onClick={() => setSellMode(false)} className="text-xs text-muted-foreground mt-2.5 hover:text-foreground transition-colors">← Cancel</button>
@@ -140,13 +174,41 @@ function HoldingSheet({ item, onClose }: { item: PortfolioHolding; onClose: () =
 }
 
 export function PortfolioTab() {
-  const { portfolioBreakdown } = useDemoAccount();
-  const [selected, setSelected] = useState<PortfolioHolding | null>(null);
+  const { holdings, portfolio, buyStock } = useDemoPortfolio();
+  const [selected, setSelected] = useState<Holding | null>(null);
+
+  function handleQuickInvest() {
+    const techHolding = holdings.find((holding) => holding.ticker === "TECH") ?? holdings[0];
+    if (!techHolding) {
+      toast.error("No holding available for a quick investment.");
+      return;
+    }
+
+    const result = buyStock({
+      ticker: techHolding.ticker,
+      name: techHolding.name,
+      color: techHolding.color,
+      amount: 500,
+      pricePerUnit: techHolding.unitPrice,
+      change: techHolding.change,
+    });
+
+    if (!result.success) {
+      toast.error(result.message);
+      return;
+    }
+
+    toast.success(result.message);
+  }
 
   return (
     <div className="animate-fade-up space-y-2.5">
-      {portfolioBreakdown.map((item) => (
-        <div key={item.ticker} onClick={() => setSelected(item)} className="bg-card rounded-2xl px-5 py-4 flex items-center justify-between transition-all duration-200 hover:-translate-y-px shadow-sm cursor-pointer active:scale-[0.98]">
+      {holdings.map((item) => (
+        <div
+          key={item.ticker}
+          onClick={() => setSelected(item)}
+          className="bg-card rounded-2xl px-5 py-4 flex items-center justify-between transition-all duration-200 hover:-translate-y-px shadow-sm cursor-pointer active:scale-[0.98]"
+        >
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: item.color + "18" }}>
               <div className="w-3 h-3 rounded-full" style={{ background: item.color }} />
@@ -160,8 +222,14 @@ export function PortfolioTab() {
           <div className="flex items-center gap-3">
             <MiniChart positive={item.change > 0} />
             <div className="text-right">
-              <p className="text-sm font-semibold text-foreground">₪{item.value.toLocaleString("en-IL", { maximumFractionDigits: 2 })}</p>
-              <p className="text-xs mt-0.5 font-medium" style={{ color: item.change > 0 ? "hsl(var(--primary-mid))" : "#e05252" }}>{item.change > 0 ? "+" : ""}{item.change}%</p>
+              <p className="text-sm font-semibold text-foreground">₪{item.value.toLocaleString()}</p>
+              <p
+                className="text-xs mt-0.5 font-medium"
+                style={{ color: item.change > 0 ? "hsl(var(--primary-mid))" : "#e05252" }}
+              >
+                {item.change > 0 ? "+" : ""}
+                {item.change}%
+              </p>
             </div>
             <span className="text-muted-foreground/40 text-xs">›</span>
           </div>
@@ -181,7 +249,13 @@ export function PortfolioTab() {
         </div>
       </div>
 
-      {portfolioBreakdown.length === 0 && <div className="bg-card rounded-2xl px-5 py-8 text-center text-sm text-muted-foreground shadow-sm">No stock holdings yet. Buy a stock to build your portfolio.</div>}
+      <button
+        onClick={handleQuickInvest}
+        className="w-full py-4 rounded-2xl text-[15px] font-semibold text-white tracking-tight transition-all duration-200"
+        style={{ background: "hsl(var(--primary))" }}
+      >
+        Quick Invest ₪500
+      </button>
 
       {selected && <HoldingSheet item={selected} onClose={() => setSelected(null)} />}
     </div>

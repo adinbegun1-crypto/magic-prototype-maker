@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { useDemoAccount } from "@/context/DemoAccountContext";
-import type { SavingsGoalRecord } from "@/types/demoAccount";
+import { toast } from "sonner";
+import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
+import type { SavingsGoal } from "@/data/kesemData";
 
 function InterestBanner() {
-  const { account } = useDemoAccount();
-  const { interestRate, interestEarnedMonth, balance } = account.cashAccount;
+  const { cashAccount } = useDemoPortfolio();
+  const { interestRate, interestEarnedMonth, balance } = cashAccount;
+
   return (
     <div className="rounded-2xl px-5 py-4 shadow-sm flex items-center justify-between" style={{ background: "hsl(var(--primary))" }}>
       <div>
@@ -23,8 +25,8 @@ function InterestBanner() {
 
 const EMOJIS = ["🏠", "✈️", "🛡️", "🚗", "📚", "💍", "🎓", "🌴", "💻", "👶"];
 
-function GoalCard({ goal }: { goal: SavingsGoalRecord }) {
-  const { contributeToGoal } = useDemoAccount();
+function GoalCard({ goal }: { goal: SavingsGoal }) {
+  const { transferToSavingsGoal } = useDemoPortfolio();
   const [expanded, setExpanded] = useState(false);
   const [inputVal, setInputVal] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -34,12 +36,17 @@ function GoalCard({ goal }: { goal: SavingsGoalRecord }) {
   const remaining = Math.max(goal.target - goal.current, 0);
 
   function handleContribute() {
-    const result = contributeToGoal({ goalId: goal.id, amount: parseFloat(inputVal) });
-    if (!result.ok) {
-      setError(result.message);
+    const result = transferToSavingsGoal({
+      goalId: goal.id,
+      amount: parseFloat(inputVal),
+    });
+
+    if (!result.success) {
+      toast.error(result.message);
       return;
     }
-    setError(null);
+
+    toast.success(result.message);
     setInputVal("");
     setExpanded(false);
   }
@@ -57,18 +64,38 @@ function GoalCard({ goal }: { goal: SavingsGoalRecord }) {
         {done ? <span className="bg-primary-wash text-primary-mid text-[11px] font-semibold px-2.5 py-1 rounded-full">Complete ✓</span> : <span className="text-xs text-muted-foreground">{goal.months}mo left</span>}
       </div>
 
-      <div className="flex justify-between text-xs text-muted-foreground mb-2"><span>₪{goal.current.toLocaleString()}</span><span>₪{goal.target.toLocaleString()}</span></div>
+      <div className="flex justify-between text-xs text-muted-foreground mb-2">
+        <span>₪{goal.current.toLocaleString()}</span>
+        <span>₪{goal.target.toLocaleString()}</span>
+      </div>
 
-      <div className="bg-secondary rounded-lg h-2.5 overflow-hidden"><div className="h-full rounded-lg transition-all duration-700 ease-in-out" style={{ width: `${pct}%`, background: done ? "hsl(var(--primary-light))" : "hsl(var(--primary-mid))" }} /></div>
+      <div className="bg-secondary rounded-lg h-2.5 overflow-hidden">
+        <div
+          className="h-full rounded-lg transition-all duration-700 ease-in-out"
+          style={{
+            width: `${pct}%`,
+            background: done ? "hsl(var(--primary-light))" : "hsl(var(--primary-mid))",
+          }}
+        />
+      </div>
 
       <div className="flex items-center justify-between mt-2.5">
         <p className="text-xs font-semibold text-primary-mid">{pct.toFixed(0)}% saved</p>
-        {!done && <button onClick={() => { setExpanded((v) => !v); setError(null); }} className="text-xs font-semibold text-primary-mid bg-primary-wash px-3 py-1 rounded-full hover:opacity-80 transition-opacity">{expanded ? "Cancel" : "+ Add funds"}</button>}
+        {!done && (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs font-semibold text-primary-mid bg-primary-wash px-3 py-1 rounded-full hover:opacity-80 transition-opacity"
+          >
+            {expanded ? "Cancel" : "+ Add funds"}
+          </button>
+        )}
       </div>
 
       {expanded && (
         <div className="mt-3 pt-3 border-t border-border animate-fade-up">
-          <p className="text-xs text-muted-foreground mb-2">Still need <span className="font-semibold text-foreground">₪{remaining.toLocaleString()}</span> to reach goal</p>
+          <p className="text-xs text-muted-foreground mb-2">
+            Still need <span className="font-semibold text-foreground">₪{remaining.toLocaleString()}</span> to reach goal
+          </p>
           <div className="flex gap-2 mb-3 flex-wrap">
             {[100, 500, 1000].map((amt) => (
               <button key={amt} onClick={() => { setInputVal(String(amt)); setError(null); }} className="px-3 py-1 rounded-xl text-xs font-semibold border transition-colors duration-150" style={{ borderColor: inputVal === String(amt) ? "hsl(var(--primary-mid))" : "hsl(var(--border))", background: inputVal === String(amt) ? "hsl(var(--primary-wash))" : "transparent", color: inputVal === String(amt) ? "hsl(var(--primary-mid))" : "hsl(var(--muted-foreground))" }}>₪{amt}</button>
@@ -87,7 +114,7 @@ function GoalCard({ goal }: { goal: SavingsGoalRecord }) {
 }
 
 function NewGoalModal({ onClose }: { onClose: () => void }) {
-  const { addSavingsGoal } = useDemoAccount();
+  const { addSavingsGoal } = useDemoPortfolio();
   const [nameEn, setNameEn] = useState("");
   const [target, setTarget] = useState("");
   const [months, setMonths] = useState("");
@@ -102,10 +129,13 @@ function NewGoalModal({ onClose }: { onClose: () => void }) {
       emoji,
       months: parseInt(months) || 12,
     });
-    if (!result.ok) {
-      setError(result.message);
+
+    if (!result.success) {
+      toast.error(result.message);
       return;
     }
+
+    toast.success(result.message);
     onClose();
   }
 
@@ -114,7 +144,21 @@ function NewGoalModal({ onClose }: { onClose: () => void }) {
       <div className="w-full max-w-[390px] bg-card rounded-3xl p-6 animate-fade-up shadow-2xl">
         <div className="flex justify-between items-center mb-5"><p className="text-base font-bold text-foreground">New Savings Goal</p><button onClick={onClose} className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm hover:bg-muted transition-colors">×</button></div>
 
-        <div className="flex gap-2 flex-wrap mb-4">{EMOJIS.map((e) => <button key={e} onClick={() => setEmoji(e)} className="w-9 h-9 rounded-xl flex items-center justify-center text-lg transition-all duration-100" style={{ background: emoji === e ? "hsl(var(--primary-wash))" : "hsl(var(--secondary))", border: emoji === e ? "2px solid hsl(var(--primary-mid))" : "2px solid transparent" }}>{e}</button>)}</div>
+        <div className="flex gap-2 flex-wrap mb-4">
+          {EMOJIS.map((e) => (
+            <button
+              key={e}
+              onClick={() => setEmoji(e)}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg transition-all duration-100"
+              style={{
+                background: emoji === e ? "hsl(var(--primary-wash))" : "hsl(var(--secondary))",
+                border: emoji === e ? "2px solid hsl(var(--primary-mid))" : "2px solid transparent",
+              }}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
 
         <div className="space-y-3">
           <div>
@@ -141,12 +185,11 @@ function NewGoalModal({ onClose }: { onClose: () => void }) {
 }
 
 export function SavingsTab() {
-  const { account } = useDemoAccount();
+  const { savingsGoals } = useDemoPortfolio();
   const [showModal, setShowModal] = useState(false);
 
-  const goals = account.savingsGoals;
-  const totalSaved = goals.reduce((s, g) => s + g.current, 0);
-  const totalTarget = goals.reduce((s, g) => s + g.target, 0);
+  const totalSaved = savingsGoals.reduce((sum, goal) => sum + goal.current, 0);
+  const totalTarget = savingsGoals.reduce((sum, goal) => sum + goal.target, 0);
   const overallPct = totalTarget > 0 ? Math.min((totalSaved / totalTarget) * 100, 100) : 0;
 
   return (
@@ -154,13 +197,18 @@ export function SavingsTab() {
       <InterestBanner />
 
       <div className="bg-card rounded-2xl px-5 py-4 shadow-sm">
-        <div className="flex justify-between items-center mb-3"><p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Total Savings Goals</p><p className="text-xs text-muted-foreground">{goals.length} goals</p></div>
+        <div className="flex justify-between items-center mb-3">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Total Savings Goals</p>
+          <p className="text-xs text-muted-foreground">{savingsGoals.length} goals</p>
+        </div>
         <p className="font-display text-[28px] text-foreground tracking-tight">₪{totalSaved.toLocaleString()}</p>
         <p className="text-xs text-muted-foreground mt-0.5">of ₪{totalTarget.toLocaleString()} goal</p>
         <div className="bg-secondary rounded-full h-2 overflow-hidden mt-3"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${overallPct}%`, background: "hsl(var(--primary-mid))" }} /></div>
       </div>
 
-      {goals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
+      {savingsGoals.map((goal) => (
+        <GoalCard key={goal.id} goal={goal} />
+      ))}
 
       <button onClick={() => setShowModal(true)} className="w-full py-3.5 bg-transparent text-primary-mid border-2 border-primary-mid rounded-2xl text-sm font-semibold hover:bg-primary-wash transition-colors duration-200">+ New Savings Goal</button>
 

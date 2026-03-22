@@ -1,4 +1,69 @@
 import { useState } from "react";
+import { toast } from "sonner";
+import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
+
+export function KesemCashCard() {
+  const {
+    cashAccount,
+    activity,
+    savingsGoals,
+    sendCash,
+    receiveCash,
+    transferToSavingsGoal,
+  } = useDemoPortfolio();
+  const [flipped, setFlipped] = useState(false);
+
+  const spendTxs = activity.filter((t) =>
+    ["spend", "salary", "transfer", "savings"].includes(t.category)
+  );
+
+  const firstActiveGoal = savingsGoals.find((goal) => goal.current < goal.target) ?? savingsGoals[0];
+
+  function handleSend() {
+    const result = sendCash({ amount: 150, counterparty: "Maya" });
+    result.success ? toast.success(result.message) : toast.error(result.message);
+  }
+
+  function handleReceive() {
+    const result = receiveCash({ amount: 300, counterparty: "Noam" });
+    result.success ? toast.success(result.message) : toast.error(result.message);
+  }
+
+  function handleTransfer() {
+    if (!firstActiveGoal) {
+      toast.error("Add a savings goal to transfer money into one.");
+      return;
+    }
+
+    const result = transferToSavingsGoal({
+      goalId: firstActiveGoal.id,
+      amount: 250,
+    });
+
+    result.success ? toast.success(result.message) : toast.error(result.message);
+  }
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="relative rounded-3xl overflow-hidden cursor-pointer select-none"
+        style={{ height: 192, perspective: 1000 }}
+        onClick={() => setFlipped((v) => !v)}
+      >
+        <div
+          className="absolute inset-0 transition-all duration-500"
+          style={{
+            transformStyle: "preserve-3d",
+            transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+          }}
+        >
+          <div
+            className="absolute inset-0 rounded-3xl p-6 flex flex-col justify-between"
+            style={{
+              background: `linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-mid)) 100%)`,
+              backfaceVisibility: "hidden",
+            }}
+          >
 import { useDemoAccount } from "@/context/DemoAccountContext";
 
 export function KesemCashCard() {
@@ -19,6 +84,9 @@ export function KesemCashCard() {
             <div className="flex justify-between items-start relative z-10">
               <div>
                 <p className="text-[10px] text-white/50 uppercase tracking-widest">Kesem Cash</p>
+                <p className="text-white font-display text-2xl mt-0.5">
+                  ₪{cashAccount.balance.toLocaleString("en-IL", { minimumFractionDigits: 2 })}
+                </p>
                 <p className="text-white font-display text-2xl mt-0.5">₪{cashAccount.balance.toLocaleString("en-IL", { minimumFractionDigits: 2 })}</p>
               </div>
               <div className="text-right">
@@ -38,6 +106,14 @@ export function KesemCashCard() {
             <p className="absolute bottom-3 right-4 text-white/20 text-[10px]">tap to flip</p>
           </div>
 
+          <div
+            className="absolute inset-0 rounded-3xl p-6 flex flex-col justify-center"
+            style={{
+              background: `linear-gradient(135deg, hsl(var(--primary-mid)) 0%, hsl(var(--primary)) 100%)`,
+              backfaceVisibility: "hidden",
+              transform: "rotateY(180deg)",
+            }}
+          >
           <div className="absolute inset-0 rounded-3xl p-6 flex flex-col justify-center" style={{ background: `linear-gradient(135deg, hsl(var(--primary-mid)) 0%, hsl(var(--primary)) 100%)`, backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
             <div className="w-full h-9 bg-white/10 rounded mb-6" />
             <div className="flex justify-between items-center">
@@ -67,6 +143,19 @@ export function KesemCashCard() {
       </div>
 
       <div className="grid grid-cols-3 gap-2">
+        {[
+          { icon: "↑", label: "Send", onClick: handleSend },
+          { icon: "↓", label: "Receive", onClick: handleReceive },
+          { icon: "⇄", label: "Transfer", onClick: handleTransfer },
+        ].map(({ icon, label, onClick }) => (
+          <button
+            key={label}
+            onClick={onClick}
+            className="bg-card rounded-2xl py-3.5 flex flex-col items-center gap-1.5 shadow-sm hover:bg-secondary transition-colors duration-150"
+          >
+            <span className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center text-primary-mid font-bold text-sm">
+              {icon}
+            </span>
         {[{ icon: "↑", label: "Send" }, { icon: "↓", label: "Receive" }, { icon: "⇄", label: "Transfer" }].map(({ icon, label }) => (
           <button key={label} className="bg-card rounded-2xl py-3.5 flex flex-col items-center gap-1.5 shadow-sm hover:bg-secondary transition-colors duration-150">
             <span className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center text-primary-mid font-bold text-sm">{icon}</span>
@@ -76,6 +165,27 @@ export function KesemCashCard() {
       </div>
 
       <div className="bg-card rounded-2xl overflow-hidden shadow-sm">
+        <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Recent Transactions
+        </p>
+        {spendTxs.map((tx) => (
+          <div
+            key={tx.id}
+            className="px-5 py-3.5 flex justify-between items-center"
+            style={{ borderTop: "1px solid hsl(var(--border))" }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-base">
+                {tx.category === "salary"
+                  ? "💼"
+                  : tx.category === "savings"
+                    ? "🎯"
+                    : tx.category === "transfer"
+                      ? tx.type === "credit"
+                        ? "💸"
+                        : "📤"
+                      : "🛒"}
+              </span>
         <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recent Transactions</p>
         {spendTxs.map((tx) => (
           <div key={tx.id} className="px-5 py-3.5 flex justify-between items-center" style={{ borderTop: "1px solid hsl(var(--border))" }}>

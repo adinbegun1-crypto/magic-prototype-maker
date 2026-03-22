@@ -8,7 +8,7 @@ import { AdviceTab } from "@/components/kesem/AdviceTab";
 import { ProfileScreen } from "@/components/kesem/ProfileScreen";
 import { KesemCashCard } from "@/components/kesem/KesemCashCard";
 import { StockSearch } from "@/components/kesem/StockSearch";
-import { DemoAccountProvider, useDemoAccount } from "@/context/DemoAccountContext";
+import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
 
 const TABS = ["Portfolio", "Managed", "Savings", "Activity", "Stocks"] as const;
 type Tab = (typeof TABS)[number];
@@ -27,7 +27,7 @@ const BOTTOM_NAV: { icon: string; label: string; screen: Screen }[] = [
 function IndexContent() {
   const [activeTab, setActiveTab] = useState<Tab>("Portfolio");
   const [activeScreen, setActiveScreen] = useState<Screen>("invest");
-  const { account, portfolioBreakdown, stockPortfolioChange, stockPortfolioChangePct, stockPortfolioTotal } = useDemoAccount();
+  const { portfolio, cashAccount, profile } = useDemoPortfolio();
 
   const { portfolio, kesemCash, transactions, savings, profile } = currentUser;
   const firstName = profile.fullName.split(" ")[0];
@@ -67,19 +67,29 @@ function IndexContent() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <p className="text-[13px] text-muted-foreground tracking-widest uppercase mb-0.5">
-              {activeScreen === "invest" ? "Good morning" : activeScreen === "cash" ? "Kesem Cash" : activeScreen === "advice" ? "Your Insights" : "Your Account"}
+              {activeScreen === "invest"
+                ? "Good morning"
+                : activeScreen === "cash"
+                  ? "Kesem Cash"
+                  : activeScreen === "advice"
+                    ? "Your Insights"
+                    : "Your Account"}
             </p>
             <h1 className="font-display text-[22px] text-foreground">
               {activeScreen === "invest"
-                ? "Adin 👋"
+                ? `${profile.firstName} 👋`
                 : activeScreen === "cash"
-                  ? `₪${account.cashAccount.balance.toLocaleString("en-IL", { minimumFractionDigits: 2 })}`
+                  ? `₪${cashAccount.balance.toLocaleString("en-IL", {
+                      minimumFractionDigits: 2,
+                    })}`
                   : activeScreen === "advice"
                     ? "What's new 🔍"
-                    : "Adin Cohen"}
+                    : profile.fullName}
             </h1>
           </div>
-          <div className="w-10 h-10 rounded-full bg-primary-mid text-white flex items-center justify-center text-sm font-semibold">A</div>
+          <div className="w-10 h-10 rounded-full bg-primary-mid text-white flex items-center justify-center text-sm font-semibold">
+            {profile.initials}
+          </div>
         </div>
 
         {showInvest && (
@@ -94,7 +104,12 @@ function IndexContent() {
               </p>
               <div className="flex items-center gap-2 relative z-10">
                 <span className="bg-white/10 text-primary-pale text-xs font-semibold px-3 py-1 rounded-full">
-                  {stockPortfolioChange >= 0 ? "+" : "-"}₪{Math.abs(stockPortfolioChange).toLocaleString("en-IL", { maximumFractionDigits: 0 })} ({stockPortfolioChangePct.toFixed(2)}%)
+                  {portfolio.change >= 0 ? "+" : ""}₪
+                  {portfolio.change.toLocaleString("en-IL", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                  {` (${portfolio.changePct >= 0 ? "+" : ""}${portfolio.changePct}%)`}
                 </span>
                 <span className="text-xs opacity-50">based on current holdings</span>
               </div>
@@ -103,7 +118,7 @@ function IndexContent() {
                 <PortfolioBar items={portfolioBreakdown} />
               </div>
               <div className="flex gap-3 mt-3 relative z-10 flex-wrap">
-                {portfolioBreakdown.map((item) => (
+                {portfolio.breakdown.map((item) => (
                   <div key={item.ticker} className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full" style={{ background: item.color }} />
                     <span className="text-[10px] opacity-60">{item.ticker}</span>
@@ -119,9 +134,13 @@ function IndexContent() {
                   onClick={() => setActiveTab(tab)}
                   className="flex-1 py-2 rounded-[10px] text-xs font-medium transition-all duration-200"
                   style={{
-                    color: activeTab === tab ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                    color:
+                      activeTab === tab
+                        ? "hsl(var(--primary))"
+                        : "hsl(var(--muted-foreground))",
                     background: activeTab === tab ? "white" : "transparent",
-                    boxShadow: activeTab === tab ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                    boxShadow:
+                      activeTab === tab ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
                   }}
                 >
                   {tab}
@@ -150,7 +169,9 @@ function IndexContent() {
                 onClick={() => setActiveScreen(screen)}
                 className="flex flex-col items-center gap-1 transition-all duration-200"
                 style={{
-                  color: active ? "hsl(var(--primary-mid))" : "hsl(var(--muted-foreground))",
+                  color: active
+                    ? "hsl(var(--primary-mid))"
+                    : "hsl(var(--muted-foreground))",
                   fontWeight: active ? 600 : 400,
                 }}
               >
