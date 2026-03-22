@@ -1,32 +1,13 @@
 import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
 
-const menuSections = [
-  {
-    title: "Account",
-    items: [
-      { icon: "🪪", label: "Personal Details", sub: "Name, email, ID" },
-      { icon: "🔔", label: "Notifications", sub: "Push, email, SMS" },
-      { icon: "🔒", label: "Security", sub: "PIN, biometrics, 2FA" },
-      { icon: "🏦", label: "Linked Bank Account", sub: "Bank Hapoalim ••4821" },
-    ],
-  },
-  {
-    title: "Preferences",
-    items: [
-      { icon: "🌍", label: "Language", sub: "English" },
-      { icon: "💱", label: "Currency", sub: "₪ Israeli Shekel" },
-      { icon: "📊", label: "Risk Profile", sub: "Balanced" },
-    ],
-  },
-  {
-    title: "Support",
-    items: [
-      { icon: "💬", label: "Chat with us", sub: "Avg. reply in 2 min" },
-      { icon: "📄", label: "Documents & Tax", sub: "Statements, reports" },
-      { icon: "ℹ️", label: "About Kesem", sub: "Version 1.0.0" },
-    ],
-  },
-];
+const supportSection = {
+  title: "Support",
+  items: [
+    { icon: "💬", label: "Chat with us", sub: "Avg. reply in 2 min" },
+    { icon: "📄", label: "Documents & Tax", sub: "Statements, reports" },
+    { icon: "ℹ️", label: "About Kesem", sub: "Version 1.0.0" },
+  ],
+};
 
 export function ProfileScreen() {
   const { cashAccount, portfolio, profile, toggleNotifications } = useDemoPortfolio();

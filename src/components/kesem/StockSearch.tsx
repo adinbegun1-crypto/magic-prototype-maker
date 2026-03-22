@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
 import { allStocks, MARKETS, type Market, type Stock } from "@/data/stocksData";
+import { useDemoAccount } from "@/context/DemoAccountContext";
 import { MiniChart } from "./MiniChart";
 
 function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
@@ -10,19 +11,35 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
   const [amountInput, setAmountInput] = useState("500");
   const [sharesInput, setSharesInput] = useState("1");
   const [confirmed, setConfirmed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const quickAmounts = ["100", "500", "1000", "5000"];
   const quickShares = ["1", "5", "10", "25"];
 
-  const totalCost =
-    mode === "amount"
-      ? parseFloat(amountInput) || 0
-      : (parseFloat(sharesInput) || 0) * stock.price;
+  const totalCost = mode === "amount" ? parseFloat(amountInput) || 0 : (parseFloat(sharesInput) || 0) * stock.price;
+  const sharesCount = mode === "shares" ? parseFloat(sharesInput) || 0 : totalCost / stock.price;
 
-  const sharesCount =
-    mode === "shares"
-      ? parseFloat(sharesInput) || 0
-      : totalCost / stock.price;
+  function handleBuy() {
+    const result = buyStock({
+      ticker: stock.ticker,
+      name: stock.name,
+      market: stock.market,
+      currency: stock.currency,
+      price: stock.price,
+      changePct: stock.changePct,
+      color: stock.color,
+      shares: sharesCount,
+      totalCost,
+    });
+
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+
+    setError(null);
+    setConfirmed(true);
+  }
 
   function handleBuy() {
     const result = buyStock({
@@ -59,6 +76,7 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
               ["Price per share", `${stock.currency}${stock.price.toLocaleString()}`],
               ["Shares", sharesCount.toFixed(sharesCount < 1 ? 4 : 2)],
               ["Total cost", `${stock.currency}${totalCost.toLocaleString("en-IL", { minimumFractionDigits: 2 })}`],
+              ["Remaining demo cash", `₪${account.cashAccount.balance.toLocaleString("en-IL", { minimumFractionDigits: 2 })}`],
             ].map(([label, val]) => (
               <div key={label} className="flex justify-between text-xs">
                 <span className="text-muted-foreground">{label}</span>
@@ -66,36 +84,23 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
               </div>
             ))}
           </div>
-          <button
-            onClick={onClose}
-            className="w-full py-4 rounded-2xl text-[15px] font-semibold text-primary-foreground bg-primary"
-          >
-            Done
-          </button>
+          <button onClick={onClose} className="w-full py-4 rounded-2xl text-[15px] font-semibold text-primary-foreground bg-primary">Done</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm px-4 pb-6"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm px-4 pb-6" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="w-full max-w-[390px] bg-card rounded-3xl p-6 animate-fade-up shadow-2xl">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white"
-              style={{ background: stock.color }}
-            >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ background: stock.color }}>
               {stock.ticker.slice(0, 2)}
             </div>
             <div>
               <p className="text-[15px] font-semibold text-foreground">{stock.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {stock.ticker} · {stock.market}
-              </p>
+              <p className="text-xs text-muted-foreground">{stock.ticker} · {stock.market}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-muted-foreground text-xl leading-none">×</button>
@@ -103,13 +108,8 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
 
         <div className="bg-background rounded-2xl px-5 py-4 mb-5 flex items-center justify-between">
           <div>
-            <p className="text-[22px] font-display font-bold text-foreground">
-              {stock.currency}{stock.price.toLocaleString()}
-            </p>
-            <p
-              className="text-xs font-medium mt-0.5"
-              style={{ color: stock.changePct >= 0 ? "hsl(var(--primary-mid))" : "#e05252" }}
-            >
+            <p className="text-[22px] font-display font-bold text-foreground">{stock.currency}{stock.price.toLocaleString()}</p>
+            <p className="text-xs font-medium mt-0.5" style={{ color: stock.changePct >= 0 ? "hsl(var(--primary-mid))" : "#e05252" }}>
               {stock.changePct >= 0 ? "▲" : "▼"} {Math.abs(stock.changePct)}% today
             </p>
           </div>
@@ -120,7 +120,10 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
           {(["amount", "shares"] as const).map((m) => (
             <button
               key={m}
-              onClick={() => setMode(m)}
+              onClick={() => {
+                setMode(m);
+                setError(null);
+              }}
               className="flex-1 py-2 rounded-[10px] text-xs font-semibold capitalize transition-all duration-200"
               style={{
                 background: mode === m ? "white" : "transparent",
@@ -165,6 +168,7 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
             placeholder={mode === "amount" ? "Enter amount" : "Enter shares"}
           />
         </div>
+        {error && <p className="mb-4 text-xs font-medium text-red-500">{error}</p>}
 
         <div className="bg-background rounded-xl px-4 py-3 mb-5 space-y-1.5">
           {[
@@ -194,22 +198,14 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
 
 function StockRow({ stock, onBuy }: { stock: Stock; onBuy: (s: Stock) => void }) {
   return (
-    <div
-      onClick={() => onBuy(stock)}
-      className="bg-card rounded-2xl px-5 py-4 flex items-center justify-between cursor-pointer transition-transform duration-200 hover:-translate-y-px shadow-sm"
-    >
+    <div onClick={() => onBuy(stock)} className="bg-card rounded-2xl px-5 py-4 flex items-center justify-between cursor-pointer transition-transform duration-200 hover:-translate-y-px shadow-sm">
       <div className="flex items-center gap-3.5">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-          style={{ background: stock.color }}
-        >
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-bold text-white shrink-0" style={{ background: stock.color }}>
           {stock.ticker.slice(0, 3)}
         </div>
         <div>
           <p className="text-sm font-medium text-foreground leading-tight">{stock.name}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            {stock.ticker} · {stock.market}
-          </p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{stock.ticker} · {stock.market}</p>
         </div>
       </div>
 
@@ -259,14 +255,7 @@ export function StockSearch() {
           placeholder="Search stocks, ETFs, markets…"
           className="w-full bg-card rounded-2xl pl-10 pr-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 ring-primary/30 shadow-sm"
         />
-        {query && (
-          <button
-            onClick={() => setQuery("")}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-          >
-            ×
-          </button>
-        )}
+        {query && <button onClick={() => setQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground">×</button>}
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-hide">
