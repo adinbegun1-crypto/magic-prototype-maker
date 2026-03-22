@@ -1,18 +1,17 @@
-import { mockData } from "@/data/kesemData";
+import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
 
 export function ActivityTab() {
-  const { transactions } = mockData;
+  const { activity } = useDemoPortfolio();
 
   return (
     <div className="animate-fade-up">
       <div className="bg-card rounded-2xl overflow-hidden shadow-sm">
-        {transactions.map((tx, i) => (
+        {activity.map((tx, i) => (
           <div
-            key={i}
+            key={tx.id}
             className="px-5 py-4 flex justify-between items-center"
             style={{
-              borderBottom:
-                i < transactions.length - 1 ? "1px solid #F4F4F0" : "none",
+              borderBottom: i < activity.length - 1 ? "1px solid #F4F4F0" : "none",
             }}
           >
             <div className="flex items-center gap-3">

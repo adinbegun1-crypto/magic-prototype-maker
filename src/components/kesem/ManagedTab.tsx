@@ -1,15 +1,8 @@
-import { useState } from "react";
-import { managedFunds, type Fund } from "@/data/kesemData";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
+import type { Fund } from "@/data/kesemData";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 function generateGrowthData(expectedLow: number, months = 12, startValue = 1000) {
   const data = [];
@@ -48,7 +41,6 @@ function RiskDots({ risk, color }: { risk: number; color: string }) {
   );
 }
 
-// ── Growth chart tooltip ──────────────────────────────────────────────────────
 function GrowthTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
@@ -59,10 +51,26 @@ function GrowthTooltip({ active, payload, label }: any) {
   );
 }
 
-// ── Fund List ─────────────────────────────────────────────────────────────────
 function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
+  const { managedFunds, managedAllocations } = useDemoPortfolio();
+
+  const totalManaged = managedAllocations.reduce(
+    (sum, allocation) => sum + allocation.investedAmount,
+    0
+  );
+
   return (
     <>
+      <div className="bg-card rounded-2xl p-4 shadow-sm mb-4">
+        <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-1">
+          Managed investing
+        </p>
+        <p className="text-lg font-semibold text-foreground">₪{totalManaged.toLocaleString("en-IL")}</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Your managed-fund positions update instantly after every demo investment.
+        </p>
+      </div>
+
       <p className="text-sm font-semibold text-foreground mb-1">Managed Investing</p>
       <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
         We build and manage a diversified portfolio for you — tailored to your risk level.
@@ -73,15 +81,16 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
         {managedFunds.map((fund) => {
           const low = parseInt(fund.expectedReturn.split("–")[0]);
           const chartData = generateGrowthData(low);
+          const currentAllocation = managedAllocations.find(
+            (allocation) => allocation.fundId === fund.id
+          );
 
           return (
             <div
-              key={fund.name}
+              key={fund.id}
               onClick={() => onSelect(fund)}
-              className="bg-card rounded-2xl p-5 cursor-pointer border-2 border-transparent
-                         hover:border-primary-mid transition-all duration-200 shadow-sm hover:shadow-md"
+              className="bg-card rounded-2xl p-5 cursor-pointer border-2 border-transparent hover:border-primary-mid transition-all duration-200 shadow-sm hover:shadow-md"
             >
-              {/* Top row */}
               <div className="flex justify-between items-start mb-3.5">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -98,10 +107,12 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
                     {fund.expectedReturn}
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">est. / yr</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Invested: ₪{currentAllocation?.investedAmount.toLocaleString("en-IL") ?? "0"}
+                  </p>
                 </div>
               </div>
 
-              {/* Growth chart */}
               <div className="mb-3" style={{ height: 70 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
@@ -127,11 +138,13 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
               </div>
 
               <AllocationBar allocation={fund.allocation} />
-              <div className="flex gap-3 mt-2.5 mb-3.5">
+              <div className="flex gap-3 mt-2.5 mb-3.5 flex-wrap">
                 {fund.allocation.map((a) => (
                   <div key={a.label} className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full" style={{ background: a.color }} />
-                    <span className="text-[10px] text-muted-foreground">{a.label} {a.pct}%</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {a.label} {a.pct}%
+                    </span>
                   </div>
                 ))}
               </div>
@@ -156,13 +169,29 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   );
 }
 
-// ── Fund Detail ───────────────────────────────────────────────────────────────
 function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
+  const { investInManagedFund, managedAllocations } = useDemoPortfolio();
   const [amount, setAmount] = useState("1000");
   const [confirmed, setConfirmed] = useState(false);
 
+  const investedSoFar = managedAllocations.find((allocation) => allocation.fundId === fund.id)?.investedAmount ?? 0;
   const low = parseInt(fund.expectedReturn.split("–")[0]);
   const chartData = generateGrowthData(low, 12, parseInt(amount) || 1000);
+
+  function handleInvest() {
+    const result = investInManagedFund({
+      fundId: fund.id,
+      amount: parseInt(amount) || 0,
+    });
+
+    if (!result.success) {
+      toast.error(result.message);
+      return;
+    }
+
+    toast.success(result.message);
+    setConfirmed(true);
+  }
 
   if (confirmed) {
     return (
@@ -170,11 +199,20 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         <div className="text-5xl mb-4">🎉</div>
         <h2 className="font-display text-[26px] text-primary mb-2">You're invested!</h2>
         <p className="text-sm text-muted-foreground mb-7 leading-relaxed">
-          ₪{parseInt(amount).toLocaleString()} is now in your{" "}
-          <strong>{fund.name}</strong> managed fund. We'll take it from here.
+          ₪{parseInt(amount).toLocaleString()} is now in your <strong>{fund.name}</strong> managed fund.
+          Your cash balance and activity feed were updated instantly.
         </p>
 
         <div className="space-y-2.5 mb-6 text-left">
+          <div className="bg-card rounded-2xl px-5 py-4 shadow-sm">
+            <p className="text-[11px] text-muted-foreground uppercase tracking-widest mb-1">
+              Total in this fund
+            </p>
+            <p className="text-[22px] font-bold" style={{ color: fund.color }}>
+              ₪{investedSoFar.toLocaleString("en-IL")}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-1">Your allocation is now tracked in shared demo state.</p>
+          </div>
           <div className="bg-card rounded-2xl px-5 py-4 shadow-sm">
             <p className="text-[11px] text-muted-foreground uppercase tracking-widest mb-1">
               Annual management fee
@@ -183,15 +221,6 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               ₪{(parseInt(amount) * 0.005).toFixed(0)} / year
             </p>
             <p className="text-[11px] text-muted-foreground mt-1">That's it. No hidden charges.</p>
-          </div>
-          <div className="bg-card rounded-2xl px-5 py-4 shadow-sm">
-            <p className="text-[11px] text-muted-foreground uppercase tracking-widest mb-1">
-              Expected return (est.)
-            </p>
-            <p className="text-[22px] font-bold" style={{ color: fund.color }}>{fund.expectedReturn} / yr</p>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Based on historical performance. Not a guarantee.
-            </p>
           </div>
         </div>
 
@@ -220,9 +249,9 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           <div className="w-2.5 h-2.5 rounded-full" style={{ background: fund.color }} />
           <h3 className="text-[17px] font-semibold text-foreground">{fund.name} Fund</h3>
         </div>
-        <p className="text-xs text-muted-foreground mb-4 leading-relaxed">{fund.description}</p>
+        <p className="text-xs text-muted-foreground mb-2 leading-relaxed">{fund.description}</p>
+        <p className="text-xs text-muted-foreground mb-4">Already invested: ₪{investedSoFar.toLocaleString("en-IL")}</p>
 
-        {/* Projected growth chart */}
         <div className="mb-4">
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">
             Projected growth on ₪{parseInt(amount).toLocaleString()} · 12 months
@@ -252,9 +281,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground font-medium mb-2.5">
-          How much would you like to invest?
-        </p>
+        <p className="text-xs text-muted-foreground font-medium mb-2.5">How much would you like to invest?</p>
         <div className="flex gap-2 mb-5">
           {["500", "1000", "5000", "10000"].map((amt) => (
             <button
@@ -289,7 +316,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         </div>
 
         <button
-          onClick={() => setConfirmed(true)}
+          onClick={handleInvest}
           className="w-full py-4 rounded-2xl text-[15px] font-semibold text-white transition-all duration-200"
           style={{ background: fund.color }}
         >
@@ -300,17 +327,23 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   );
 }
 
-// ── Export ────────────────────────────────────────────────────────────────────
 export function ManagedTab() {
   const [selectedFund, setSelectedFund] = useState<Fund | null>(null);
+  const { managedAllocations } = useDemoPortfolio();
+
+  const activeManagedCount = useMemo(
+    () => managedAllocations.filter((allocation) => allocation.investedAmount > 0).length,
+    [managedAllocations]
+  );
 
   return (
     <div className="animate-fade-up">
-      {selectedFund ? (
-        <FundDetail fund={selectedFund} onBack={() => setSelectedFund(null)} />
-      ) : (
-        <FundList onSelect={setSelectedFund} />
+      {activeManagedCount > 0 && !selectedFund && (
+        <p className="text-xs text-muted-foreground mb-3 px-1">
+          {activeManagedCount} managed fund{activeManagedCount === 1 ? "" : "s"} currently funded.
+        </p>
       )}
+      {selectedFund ? <FundDetail fund={selectedFund} onBack={() => setSelectedFund(null)} /> : <FundList onSelect={setSelectedFund} />}
     </div>
   );
 }

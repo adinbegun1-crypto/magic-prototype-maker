@@ -1,15 +1,50 @@
 import { useState } from "react";
-import { mockData } from "@/data/kesemData";
+import { toast } from "sonner";
+import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
 
 export function KesemCashCard() {
-  const { kesemCash, transactions } = mockData;
+  const {
+    cashAccount,
+    activity,
+    savingsGoals,
+    sendCash,
+    receiveCash,
+    transferToSavingsGoal,
+  } = useDemoPortfolio();
   const [flipped, setFlipped] = useState(false);
 
-  const spendTxs = transactions.filter((t) => t.category === "spend" || t.category === "salary");
+  const spendTxs = activity.filter((t) =>
+    ["spend", "salary", "transfer", "savings"].includes(t.category)
+  );
+
+  const firstActiveGoal = savingsGoals.find((goal) => goal.current < goal.target) ?? savingsGoals[0];
+
+  function handleSend() {
+    const result = sendCash({ amount: 150, counterparty: "Maya" });
+    result.success ? toast.success(result.message) : toast.error(result.message);
+  }
+
+  function handleReceive() {
+    const result = receiveCash({ amount: 300, counterparty: "Noam" });
+    result.success ? toast.success(result.message) : toast.error(result.message);
+  }
+
+  function handleTransfer() {
+    if (!firstActiveGoal) {
+      toast.error("Add a savings goal to transfer money into one.");
+      return;
+    }
+
+    const result = transferToSavingsGoal({
+      goalId: firstActiveGoal.id,
+      amount: 250,
+    });
+
+    result.success ? toast.success(result.message) : toast.error(result.message);
+  }
 
   return (
     <div className="space-y-3">
-      {/* Debit card */}
       <div
         className="relative rounded-3xl overflow-hidden cursor-pointer select-none"
         style={{ height: 192, perspective: 1000 }}
@@ -22,7 +57,6 @@ export function KesemCashCard() {
             transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
           }}
         >
-          {/* Front */}
           <div
             className="absolute inset-0 rounded-3xl p-6 flex flex-col justify-between"
             style={{
@@ -37,27 +71,26 @@ export function KesemCashCard() {
               <div>
                 <p className="text-[10px] text-white/50 uppercase tracking-widest">Kesem Cash</p>
                 <p className="text-white font-display text-2xl mt-0.5">
-                  ₪{kesemCash.balance.toLocaleString("en-IL", { minimumFractionDigits: 2 })}
+                  ₪{cashAccount.balance.toLocaleString("en-IL", { minimumFractionDigits: 2 })}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-white/50 text-[10px] uppercase tracking-wide">Interest</p>
-                <p className="text-primary-pale font-bold text-base">{kesemCash.interestRate}% p.a.</p>
+                <p className="text-primary-pale font-bold text-base">{cashAccount.interestRate}% p.a.</p>
               </div>
             </div>
 
             <div className="relative z-10">
-              <p className="text-white/40 text-xs tracking-[0.2em] mb-1">{kesemCash.accountNumber}</p>
+              <p className="text-white/40 text-xs tracking-[0.2em] mb-1">{cashAccount.accountNumber}</p>
               <div className="flex justify-between items-end">
-                <p className="text-white/70 text-xs font-medium">{kesemCash.cardHolder}</p>
-                <p className="text-white/50 text-[10px]">{kesemCash.cardType}</p>
+                <p className="text-white/70 text-xs font-medium">{cashAccount.cardHolder}</p>
+                <p className="text-white/50 text-[10px]">{cashAccount.cardType}</p>
               </div>
             </div>
 
             <p className="absolute bottom-3 right-4 text-white/20 text-[10px]">tap to flip</p>
           </div>
 
-          {/* Back */}
           <div
             className="absolute inset-0 rounded-3xl p-6 flex flex-col justify-center"
             style={{
@@ -82,7 +115,6 @@ export function KesemCashCard() {
         </div>
       </div>
 
-      {/* Interest earned banner */}
       <div className="bg-primary-wash rounded-2xl px-5 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-base">💸</span>
@@ -91,18 +123,18 @@ export function KesemCashCard() {
             <p className="text-[11px] text-muted-foreground">Accrued daily, paid monthly</p>
           </div>
         </div>
-        <p className="text-primary-mid font-bold text-base">+₪{kesemCash.interestEarnedMonth}</p>
+        <p className="text-primary-mid font-bold text-base">+₪{cashAccount.interestEarnedMonth}</p>
       </div>
 
-      {/* Quick actions */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { icon: "↑", label: "Send" },
-          { icon: "↓", label: "Receive" },
-          { icon: "⇄", label: "Transfer" },
-        ].map(({ icon, label }) => (
+          { icon: "↑", label: "Send", onClick: handleSend },
+          { icon: "↓", label: "Receive", onClick: handleReceive },
+          { icon: "⇄", label: "Transfer", onClick: handleTransfer },
+        ].map(({ icon, label, onClick }) => (
           <button
             key={label}
+            onClick={onClick}
             className="bg-card rounded-2xl py-3.5 flex flex-col items-center gap-1.5 shadow-sm hover:bg-secondary transition-colors duration-150"
           >
             <span className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center text-primary-mid font-bold text-sm">
@@ -113,20 +145,27 @@ export function KesemCashCard() {
         ))}
       </div>
 
-      {/* Recent card transactions */}
       <div className="bg-card rounded-2xl overflow-hidden shadow-sm">
         <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Recent Transactions
         </p>
-        {spendTxs.map((tx, i) => (
+        {spendTxs.map((tx) => (
           <div
-            key={i}
+            key={tx.id}
             className="px-5 py-3.5 flex justify-between items-center"
             style={{ borderTop: "1px solid hsl(var(--border))" }}
           >
             <div className="flex items-center gap-3">
               <span className="text-base">
-                {tx.category === "salary" ? "💼" : tx.category === "spend" ? "🛒" : "💳"}
+                {tx.category === "salary"
+                  ? "💼"
+                  : tx.category === "savings"
+                    ? "🎯"
+                    : tx.category === "transfer"
+                      ? tx.type === "credit"
+                        ? "💸"
+                        : "📤"
+                      : "🛒"}
               </span>
               <div>
                 <p className="text-[13px] font-medium text-foreground">{tx.desc}</p>

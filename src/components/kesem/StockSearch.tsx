@@ -1,9 +1,11 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
 import { allStocks, MARKETS, type Market, type Stock } from "@/data/stocksData";
 import { MiniChart } from "./MiniChart";
 
-/* ── Buy Modal ─────────────────────────────────────────── */
 function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
+  const { buyStock } = useDemoPortfolio();
   const [mode, setMode] = useState<"amount" | "shares">("amount");
   const [amountInput, setAmountInput] = useState("500");
   const [sharesInput, setSharesInput] = useState("1");
@@ -22,6 +24,25 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
       ? parseFloat(sharesInput) || 0
       : totalCost / stock.price;
 
+  function handleBuy() {
+    const result = buyStock({
+      ticker: stock.ticker,
+      name: stock.name,
+      color: stock.color,
+      amount: totalCost,
+      pricePerUnit: stock.price,
+      change: stock.changePct,
+    });
+
+    if (!result.success) {
+      toast.error(result.message);
+      return;
+    }
+
+    toast.success(result.message);
+    setConfirmed(true);
+  }
+
   if (confirmed) {
     return (
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm px-4 pb-6">
@@ -29,13 +50,7 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
           <div className="text-5xl mb-4">🎉</div>
           <h2 className="font-display text-[24px] text-primary mb-2">Order placed!</h2>
           <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-            You bought{" "}
-            <strong>{sharesCount.toFixed(sharesCount < 1 ? 4 : 2)} shares</strong> of{" "}
-            <strong>{stock.ticker}</strong> for{" "}
-            <strong>
-              {stock.currency}{totalCost.toLocaleString("en-IL", { minimumFractionDigits: 2 })}
-            </strong>
-            .
+            You bought <strong>{sharesCount.toFixed(sharesCount < 1 ? 4 : 2)} shares</strong> of <strong>{stock.ticker}</strong> for <strong>{stock.currency}{totalCost.toLocaleString("en-IL", { minimumFractionDigits: 2 })}</strong>.
           </p>
           <div className="bg-background rounded-2xl px-5 py-4 mb-6 space-y-2 text-left">
             {[
@@ -68,7 +83,6 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="w-full max-w-[390px] bg-card rounded-3xl p-6 animate-fade-up shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div
@@ -87,7 +101,6 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
           <button onClick={onClose} className="text-muted-foreground text-xl leading-none">×</button>
         </div>
 
-        {/* Live price */}
         <div className="bg-background rounded-2xl px-5 py-4 mb-5 flex items-center justify-between">
           <div>
             <p className="text-[22px] font-display font-bold text-foreground">
@@ -103,7 +116,6 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
           <MiniChart positive={stock.changePct >= 0} />
         </div>
 
-        {/* Mode toggle */}
         <div className="flex bg-secondary rounded-xl p-1 mb-4">
           {(["amount", "shares"] as const).map((m) => (
             <button
@@ -121,22 +133,17 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
           ))}
         </div>
 
-        {/* Quick-select chips */}
         <div className="flex gap-2 mb-3">
           {(mode === "amount" ? quickAmounts : quickShares).map((v) => (
             <button
               key={v}
-              onClick={() => mode === "amount" ? setAmountInput(v) : setSharesInput(v)}
+              onClick={() => (mode === "amount" ? setAmountInput(v) : setSharesInput(v))}
               className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all duration-150"
               style={{
                 background:
-                  (mode === "amount" ? amountInput : sharesInput) === v
-                    ? stock.color
-                    : "hsl(var(--secondary))",
+                  (mode === "amount" ? amountInput : sharesInput) === v ? stock.color : "hsl(var(--secondary))",
                 color:
-                  (mode === "amount" ? amountInput : sharesInput) === v
-                    ? "white"
-                    : "hsl(var(--muted-foreground))",
+                  (mode === "amount" ? amountInput : sharesInput) === v ? "white" : "hsl(var(--muted-foreground))",
               }}
             >
               {mode === "amount" ? `${stock.currency}${parseInt(v).toLocaleString()}` : `${v} sh`}
@@ -144,7 +151,6 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
           ))}
         </div>
 
-        {/* Custom input */}
         <div className="relative mb-5">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
             {mode === "amount" ? stock.currency : "#"}
@@ -153,26 +159,17 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
             type="number"
             value={mode === "amount" ? amountInput : sharesInput}
             onChange={(e) =>
-              mode === "amount"
-                ? setAmountInput(e.target.value)
-                : setSharesInput(e.target.value)
+              mode === "amount" ? setAmountInput(e.target.value) : setSharesInput(e.target.value)
             }
             className="w-full bg-secondary rounded-xl pl-8 pr-4 py-3 text-sm font-semibold text-foreground outline-none focus:ring-2 ring-primary/30"
             placeholder={mode === "amount" ? "Enter amount" : "Enter shares"}
           />
         </div>
 
-        {/* Summary */}
         <div className="bg-background rounded-xl px-4 py-3 mb-5 space-y-1.5">
           {[
-            [
-              "Estimated shares",
-              `${sharesCount.toFixed(sharesCount < 1 ? 4 : 2)} sh`,
-            ],
-            [
-              "Total cost",
-              `${stock.currency}${totalCost.toLocaleString("en-IL", { minimumFractionDigits: 2 })}`,
-            ],
+            ["Estimated shares", `${sharesCount.toFixed(sharesCount < 1 ? 4 : 2)} sh`],
+            ["Total cost", `${stock.currency}${totalCost.toLocaleString("en-IL", { minimumFractionDigits: 2 })}`],
             ["52-week range", `${stock.currency}${stock.low52.toLocaleString()} – ${stock.currency}${stock.high52.toLocaleString()}`],
           ].map(([label, val]) => (
             <div key={label} className="flex justify-between text-xs">
@@ -183,7 +180,7 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
         </div>
 
         <button
-          onClick={() => setConfirmed(true)}
+          onClick={handleBuy}
           disabled={totalCost <= 0}
           className="w-full py-4 rounded-2xl text-[15px] font-semibold text-white transition-all duration-200 disabled:opacity-40"
           style={{ background: stock.color }}
@@ -195,7 +192,6 @@ function BuyModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
   );
 }
 
-/* ── Stock Row ─────────────────────────────────────────── */
 function StockRow({ stock, onBuy }: { stock: Stock; onBuy: (s: Stock) => void }) {
   return (
     <div
@@ -220,9 +216,7 @@ function StockRow({ stock, onBuy }: { stock: Stock; onBuy: (s: Stock) => void })
       <div className="flex items-center gap-3">
         <MiniChart positive={stock.changePct >= 0} />
         <div className="text-right">
-          <p className="text-sm font-semibold text-foreground">
-            {stock.currency}{stock.price.toLocaleString()}
-          </p>
+          <p className="text-sm font-semibold text-foreground">{stock.currency}{stock.price.toLocaleString()}</p>
           <p
             className="text-[11px] font-medium mt-0.5"
             style={{ color: stock.changePct >= 0 ? "hsl(var(--primary-mid))" : "#e05252" }}
@@ -235,22 +229,17 @@ function StockRow({ stock, onBuy }: { stock: Stock; onBuy: (s: Stock) => void })
   );
 }
 
-/* ── Main Component ───────────────────────────────────── */
 export function StockSearch() {
   const [query, setQuery] = useState("");
   const [market, setMarket] = useState<Market>("All");
-  const [buyStock, setBuyStock] = useState<Stock | null>(null);
+  const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [focused, setFocused] = useState(false);
 
   const results = useMemo(() => {
     const q = query.toLowerCase().trim();
     return allStocks.filter((s) => {
       const matchesMarket = market === "All" || s.market === market;
-      const matchesQuery =
-        !q ||
-        s.ticker.toLowerCase().includes(q) ||
-        s.name.toLowerCase().includes(q) ||
-        s.sector.toLowerCase().includes(q);
+      const matchesQuery = !q || s.ticker.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || s.sector.toLowerCase().includes(q);
       return matchesMarket && matchesQuery;
     });
   }, [query, market]);
@@ -259,7 +248,6 @@ export function StockSearch() {
 
   return (
     <div className="animate-fade-up">
-      {/* Search input */}
       <div className="relative mb-3">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-base">🔍</span>
         <input
@@ -281,7 +269,6 @@ export function StockSearch() {
         )}
       </div>
 
-      {/* Market filter chips */}
       <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-hide">
         {MARKETS.map((m) => (
           <button
@@ -298,40 +285,35 @@ export function StockSearch() {
         ))}
       </div>
 
-      {/* Results */}
       {showResults ? (
         <div className="space-y-2.5">
           {results.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground text-sm">
-              No stocks found for "{query}"
-            </div>
+            <div className="text-center py-10 text-muted-foreground text-sm">No stocks found for "{query}"</div>
           ) : (
             <>
               <p className="text-xs text-muted-foreground font-medium px-1 mb-1">
                 {results.length} result{results.length !== 1 ? "s" : ""}
               </p>
-              {results.map((s) => (
-                <StockRow key={s.ticker} stock={s} onBuy={setBuyStock} />
+              {results.map((stock) => (
+                <StockRow key={stock.ticker} stock={stock} onBuy={setSelectedStock} />
               ))}
             </>
           )}
         </div>
       ) : (
-        /* Default: top movers */
         <div className="space-y-2.5">
           <p className="text-xs text-muted-foreground font-medium px-1">Top movers today</p>
           {allStocks
             .slice()
             .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
             .slice(0, 5)
-            .map((s) => (
-              <StockRow key={s.ticker} stock={s} onBuy={setBuyStock} />
+            .map((stock) => (
+              <StockRow key={stock.ticker} stock={stock} onBuy={setSelectedStock} />
             ))}
         </div>
       )}
 
-      {/* Buy modal */}
-      {buyStock && <BuyModal stock={buyStock} onClose={() => setBuyStock(null)} />}
+      {selectedStock && <BuyModal stock={selectedStock} onClose={() => setSelectedStock(null)} />}
     </div>
   );
 }

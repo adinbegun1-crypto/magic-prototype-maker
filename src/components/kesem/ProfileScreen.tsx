@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { mockData } from "@/data/kesemData";
+import { useDemoPortfolio } from "@/context/DemoPortfolioContext";
 
 const menuSections = [
   {
@@ -30,25 +29,25 @@ const menuSections = [
 ];
 
 export function ProfileScreen() {
-  const [notificationsOn, setNotificationsOn] = useState(true);
-  const { kesemCash, portfolio } = mockData;
+  const { cashAccount, portfolio, profile, toggleNotifications } = useDemoPortfolio();
 
   return (
     <div className="animate-fade-up space-y-5">
-      {/* Profile hero */}
       <div className="bg-card rounded-3xl p-5 shadow-sm flex items-center gap-4">
         <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-white text-2xl font-bold font-display flex-shrink-0">
-          A
+          {profile.initials}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-base font-bold text-foreground">Adin Cohen</p>
-          <p className="text-xs text-muted-foreground mt-0.5">adin@email.com</p>
+          <p className="text-base font-bold text-foreground">{profile.fullName}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{profile.email}</p>
           <div className="flex items-center gap-2 mt-2">
-            <span className="bg-primary-wash text-primary-mid text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
-              Verified ✓
-            </span>
+            {profile.verified && (
+              <span className="bg-primary-wash text-primary-mid text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
+                Verified ✓
+              </span>
+            )}
             <span className="bg-secondary text-muted-foreground text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
-              Balanced investor
+              {profile.riskProfile} investor
             </span>
           </div>
         </div>
@@ -57,12 +56,11 @@ export function ProfileScreen() {
         </button>
       </div>
 
-      {/* Stats strip */}
       <div className="grid grid-cols-3 gap-2">
         {[
           { label: "Portfolio", value: `₪${(portfolio.total / 1000).toFixed(1)}K` },
-          { label: "Cash balance", value: `₪${(kesemCash.balance / 1000).toFixed(1)}K` },
-          { label: "Member since", value: "Jan 2023" },
+          { label: "Cash balance", value: `₪${(cashAccount.balance / 1000).toFixed(1)}K` },
+          { label: "Member since", value: profile.memberSince },
         ].map((s) => (
           <div key={s.label} className="bg-card rounded-2xl p-3 text-center shadow-sm">
             <p className="text-sm font-bold text-foreground">{s.value}</p>
@@ -71,7 +69,6 @@ export function ProfileScreen() {
         ))}
       </div>
 
-      {/* Notifications toggle */}
       <div className="bg-card rounded-2xl px-5 py-4 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-lg">🔔</span>
@@ -81,18 +78,19 @@ export function ProfileScreen() {
           </div>
         </div>
         <button
-          onClick={() => setNotificationsOn((v) => !v)}
+          onClick={toggleNotifications}
           className="relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0"
-          style={{ background: notificationsOn ? "hsl(var(--primary-mid))" : "hsl(var(--muted))" }}
+          style={{
+            background: profile.notificationsEnabled ? "hsl(var(--primary-mid))" : "hsl(var(--muted))",
+          }}
         >
           <span
             className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-200"
-            style={{ left: notificationsOn ? "calc(100% - 22px)" : "2px" }}
+            style={{ left: profile.notificationsEnabled ? "calc(100% - 22px)" : "2px" }}
           />
         </button>
       </div>
 
-      {/* Menu sections */}
       {menuSections.map((section) => (
         <div key={section.title}>
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2">
@@ -108,7 +106,9 @@ export function ProfileScreen() {
                 <span className="text-base w-6 text-center">{item.icon}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.sub}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.label === "Risk Profile" ? profile.riskProfile : item.sub}
+                  </p>
                 </div>
                 <span className="text-muted-foreground text-xs">›</span>
               </button>
@@ -117,7 +117,6 @@ export function ProfileScreen() {
         </div>
       ))}
 
-      {/* Log out */}
       <button className="w-full py-3.5 bg-card text-destructive border border-destructive/20 rounded-2xl text-sm font-semibold hover:bg-destructive/5 transition-colors duration-200 shadow-sm">
         Log out
       </button>
