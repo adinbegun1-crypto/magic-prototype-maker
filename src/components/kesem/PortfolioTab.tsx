@@ -1,21 +1,20 @@
-import { mockData } from "@/data/kesemData";
+import { useState } from "react";
+import type { DemoPortfolio } from "@/lib/demoAccountStorage";
 import { MiniChart } from "./MiniChart";
 import { PortfolioBar } from "./PortfolioBar";
-import { useState } from "react";
 
-// ── Holding detail + sell sheet ──────────────────────────────────────────────
 function HoldingSheet({
   item,
   onClose,
 }: {
-  item: (typeof mockData.portfolio.breakdown)[0];
+  item: DemoPortfolio["breakdown"][number];
   onClose: () => void;
 }) {
   const [sellMode, setSellMode] = useState(false);
   const [sellAmt, setSellAmt] = useState("500");
   const [confirmed, setConfirmed] = useState(false);
 
-  const shares = (item.value / 120).toFixed(2); // mock share price
+  const shares = (item.value / 120).toFixed(2);
   const pricePerShare = (item.value / parseFloat(shares)).toFixed(2);
 
   if (confirmed) {
@@ -42,7 +41,6 @@ function HoldingSheet({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4" style={{ background: "rgba(0,0,0,0.4)" }}>
       <div className="w-full max-w-[390px] bg-card rounded-3xl p-6 animate-fade-up shadow-2xl">
-        {/* Header */}
         <div className="flex justify-between items-start mb-5">
           <div className="flex items-center gap-3">
             <div
@@ -64,7 +62,6 @@ function HoldingSheet({
           </button>
         </div>
 
-        {/* Stats grid */}
         <div className="grid grid-cols-2 gap-2.5 mb-5">
           {[
             ["Market Value", `₪${item.value.toLocaleString()}`],
@@ -91,7 +88,6 @@ function HoldingSheet({
           ))}
         </div>
 
-        {/* Sparkline */}
         <div className="mb-5">
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">30-day performance</p>
           <div className="h-16 w-full">
@@ -99,7 +95,6 @@ function HoldingSheet({
           </div>
         </div>
 
-        {/* Sell panel */}
         {!sellMode ? (
           <div className="flex gap-2.5">
             <button
@@ -171,11 +166,9 @@ function HoldingSheet({
   );
 }
 
-// ── Main tab ─────────────────────────────────────────────────────────────────
-export function PortfolioTab() {
-  const { portfolio } = mockData;
+export function PortfolioTab({ portfolio }: { portfolio: DemoPortfolio }) {
   const [invested, setInvested] = useState(false);
-  const [selected, setSelected] = useState<(typeof portfolio.breakdown)[0] | null>(null);
+  const [selected, setSelected] = useState<DemoPortfolio["breakdown"][number] | null>(null);
 
   return (
     <div className="animate-fade-up space-y-2.5">
@@ -201,14 +194,13 @@ export function PortfolioTab() {
           <div className="flex items-center gap-3">
             <MiniChart positive={item.change > 0} />
             <div className="text-right">
-              <p className="text-sm font-semibold text-foreground">
-                ₪{item.value.toLocaleString()}
-              </p>
+              <p className="text-sm font-semibold text-foreground">₪{item.value.toLocaleString()}</p>
               <p
                 className="text-xs mt-0.5 font-medium"
                 style={{ color: item.change > 0 ? "hsl(var(--primary-mid))" : "#e05252" }}
               >
-                {item.change > 0 ? "+" : ""}{item.change}%
+                {item.change > 0 ? "+" : ""}
+                {item.change}%
               </p>
             </div>
             <span className="text-muted-foreground/40 text-xs">›</span>
@@ -216,11 +208,8 @@ export function PortfolioTab() {
         </div>
       ))}
 
-      {/* Allocation bar summary */}
       <div className="bg-card rounded-2xl px-5 py-4 shadow-sm">
-        <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wide">
-          Allocation
-        </p>
+        <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wide">Allocation</p>
         <PortfolioBar items={portfolio.breakdown} />
         <div className="flex gap-3 mt-3 flex-wrap">
           {portfolio.breakdown.map((item) => (

@@ -1,14 +1,12 @@
-import { mockData } from "@/data/kesemData";
+import type { Transaction } from "@/data/kesemData";
 
-export function ActivityTab() {
-  const { transactions } = mockData;
-
+export function ActivityTab({ transactions }: { transactions: Transaction[] }) {
   return (
     <div className="animate-fade-up">
       <div className="bg-card rounded-2xl overflow-hidden shadow-sm">
         {transactions.map((tx, i) => (
           <div
-            key={i}
+            key={`${tx.desc}-${tx.date}-${i}`}
             className="px-5 py-4 flex justify-between items-center"
             style={{
               borderBottom:

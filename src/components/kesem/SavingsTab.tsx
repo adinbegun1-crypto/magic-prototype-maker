@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { mockData, SavingsGoal } from "@/data/kesemData";
+import { useEffect, useState } from "react";
+import type { SavingsGoal } from "@/data/kesemData";
+import type { DemoKesemCash } from "@/lib/demoAccountStorage";
 
-// ── Interest account banner ──────────────────────────────────────────────────
-function InterestBanner() {
-  const { interestRate, interestEarnedMonth, balance } = mockData.kesemCash;
+function InterestBanner({ kesemCash }: { kesemCash: DemoKesemCash }) {
+  const { interestRate, interestEarnedMonth, balance } = kesemCash;
+
   return (
     <div
       className="rounded-2xl px-5 py-4 shadow-sm flex items-center justify-between"
@@ -33,11 +34,13 @@ function InterestBanner() {
 
 const EMOJIS = ["🏠", "✈️", "🛡️", "🚗", "📚", "💍", "🎓", "🌴", "💻", "👶"];
 
+type GoalWithCurrent = SavingsGoal & { current: number };
+
 function GoalCard({
   goal,
   onContribute,
 }: {
-  goal: SavingsGoal & { current: number };
+  goal: GoalWithCurrent;
   onContribute: (amount: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -58,7 +61,6 @@ function GoalCard({
 
   return (
     <div className="bg-card rounded-2xl p-5 shadow-sm transition-all duration-200">
-      {/* Header */}
       <div className="flex justify-between items-start mb-3.5">
         <div className="flex items-center gap-2.5">
           <span className="text-[22px]">{goal.emoji}</span>
@@ -76,13 +78,11 @@ function GoalCard({
         )}
       </div>
 
-      {/* Progress values */}
       <div className="flex justify-between text-xs text-muted-foreground mb-2">
         <span>₪{goal.current.toLocaleString()}</span>
         <span>₪{goal.target.toLocaleString()}</span>
       </div>
 
-      {/* Progress bar */}
       <div className="bg-secondary rounded-lg h-2.5 overflow-hidden">
         <div
           className="h-full rounded-lg transition-all duration-700 ease-in-out"
@@ -93,7 +93,6 @@ function GoalCard({
         />
       </div>
 
-      {/* Pct + expand */}
       <div className="flex items-center justify-between mt-2.5">
         <p className="text-xs font-semibold text-primary-mid">{pct.toFixed(0)}% saved</p>
         {!done && (
@@ -106,13 +105,11 @@ function GoalCard({
         )}
       </div>
 
-      {/* Expanded contribute panel */}
       {expanded && (
         <div className="mt-3 pt-3 border-t border-border animate-fade-up">
           <p className="text-xs text-muted-foreground mb-2">
             Still need <span className="font-semibold text-foreground">₪{remaining.toLocaleString()}</span> to reach goal
           </p>
-          {/* Quick amounts */}
           <div className="flex gap-2 mb-3 flex-wrap">
             {[100, 500, 1000].map((amt) => (
               <button
@@ -161,8 +158,6 @@ function GoalCard({
   );
 }
 
-type GoalWithCurrent = SavingsGoal & { current: number };
-
 function NewGoalModal({ onClose, onAdd }: { onClose: () => void; onAdd: (g: GoalWithCurrent) => void }) {
   const [nameEn, setNameEn] = useState("");
   const [target, setTarget] = useState("");
@@ -190,7 +185,6 @@ function NewGoalModal({ onClose, onAdd }: { onClose: () => void; onAdd: (g: Goal
           <button onClick={onClose} className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground text-sm hover:bg-muted transition-colors">×</button>
         </div>
 
-        {/* Emoji picker */}
         <div className="flex gap-2 flex-wrap mb-4">
           {EMOJIS.map((e) => (
             <button
@@ -207,7 +201,6 @@ function NewGoalModal({ onClose, onAdd }: { onClose: () => void; onAdd: (g: Goal
           ))}
         </div>
 
-        {/* Inputs */}
         <div className="space-y-3">
           <div>
             <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Goal name</label>
@@ -255,42 +248,53 @@ function NewGoalModal({ onClose, onAdd }: { onClose: () => void; onAdd: (g: Goal
   );
 }
 
-export function SavingsTab() {
-  const [goals, setGoals] = useState<GoalWithCurrent[]>(
-    mockData.savings.map((g) => ({ ...g }))
-  );
+export function SavingsTab({
+  savings,
+  kesemCash,
+  onSavingsChange,
+}: {
+  savings: SavingsGoal[];
+  kesemCash: DemoKesemCash;
+  onSavingsChange: (goals: SavingsGoal[]) => void;
+}) {
+  const [goals, setGoals] = useState<GoalWithCurrent[]>(savings.map((goal) => ({ ...goal })));
   const [showModal, setShowModal] = useState(false);
 
-  const totalSaved = goals.reduce((s, g) => s + g.current, 0);
-  const totalTarget = goals.reduce((s, g) => s + g.target, 0);
-  const overallPct = Math.min((totalSaved / totalTarget) * 100, 100);
+  useEffect(() => {
+    setGoals(savings.map((goal) => ({ ...goal })));
+  }, [savings]);
+
+  const totalSaved = goals.reduce((sum, goal) => sum + goal.current, 0);
+  const totalTarget = goals.reduce((sum, goal) => sum + goal.target, 0);
+  const overallPct = totalTarget === 0 ? 0 : Math.min((totalSaved / totalTarget) * 100, 100);
+
+  function commitGoals(nextGoals: GoalWithCurrent[]) {
+    setGoals(nextGoals);
+    onSavingsChange(nextGoals);
+  }
 
   function handleContribute(idx: number, amount: number) {
-    setGoals((prev) =>
-      prev.map((g, i) =>
-        i === idx ? { ...g, current: Math.min(g.current + amount, g.target) } : g
+    commitGoals(
+      goals.map((goal, i) =>
+        i === idx ? { ...goal, current: Math.min(goal.current + amount, goal.target) } : goal
       )
     );
   }
 
   function handleAdd(goal: GoalWithCurrent) {
-    setGoals((prev) => [...prev, goal]);
+    commitGoals([...goals, goal]);
   }
 
   return (
     <div className="animate-fade-up space-y-2.5">
-      {/* Interest account banner */}
-      <InterestBanner />
+      <InterestBanner kesemCash={kesemCash} />
 
-      {/* Summary card */}
       <div className="bg-card rounded-2xl px-5 py-4 shadow-sm">
         <div className="flex justify-between items-center mb-3">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Total Savings Goals</p>
           <p className="text-xs text-muted-foreground">{goals.length} goals</p>
         </div>
-        <p className="font-display text-[28px] text-foreground tracking-tight">
-          ₪{totalSaved.toLocaleString()}
-        </p>
+        <p className="font-display text-[28px] text-foreground tracking-tight">₪{totalSaved.toLocaleString()}</p>
         <p className="text-xs text-muted-foreground mt-0.5">of ₪{totalTarget.toLocaleString()} goal</p>
         <div className="bg-secondary rounded-full h-2 overflow-hidden mt-3">
           <div
@@ -315,9 +319,7 @@ export function SavingsTab() {
         + New Savings Goal
       </button>
 
-      {showModal && (
-        <NewGoalModal onClose={() => setShowModal(false)} onAdd={handleAdd} />
-      )}
+      {showModal && <NewGoalModal onClose={() => setShowModal(false)} onAdd={handleAdd} />}
     </div>
   );
 }
