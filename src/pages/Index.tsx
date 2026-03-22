@@ -15,6 +15,8 @@ type Tab = (typeof TABS)[number];
 
 type Screen = "invest" | "cash" | "advice" | "profile";
 
+type AuthMode = "sign-in" | "sign-up";
+
 const BOTTOM_NAV: { icon: string; label: string; screen: Screen }[] = [
   { icon: "📈", label: "Invest", screen: "invest" },
   { icon: "💳", label: "Cash", screen: "cash" },
@@ -27,7 +29,37 @@ function IndexContent() {
   const [activeScreen, setActiveScreen] = useState<Screen>("invest");
   const { account, portfolioBreakdown, stockPortfolioChange, stockPortfolioChangePct, stockPortfolioTotal } = useDemoAccount();
 
+  const { portfolio, kesemCash, transactions, savings, profile } = currentUser;
+  const firstName = profile.fullName.split(" ")[0];
   const showInvest = activeScreen === "invest";
+
+  function updateCurrentUser(updater: (user: DemoUserRecord) => DemoUserRecord) {
+    const updatedUser = updateDemoUser(profile.id, updater);
+    if (!updatedUser) return;
+
+    setCurrentUser(updatedUser);
+    setSavedUsers(listDemoUsers());
+  }
+
+  function handleResetAccount() {
+    const resetUser = resetDemoUser(profile.id);
+    if (!resetUser) return;
+
+    setCurrentUser(resetUser);
+    setSavedUsers(listDemoUsers());
+    setActiveScreen("invest");
+    setActiveTab("Portfolio");
+    toast.success(`Reset ${resetUser.profile.fullName}'s demo account.`);
+  }
+
+  function handleLogout() {
+    signOutDemoUser();
+    setCurrentUser(null);
+    setSavedUsers(listDemoUsers());
+    setActiveScreen("invest");
+    setActiveTab("Portfolio");
+    toast.success("Signed out. Your demo account is still saved on this browser.");
+  }
 
   return (
     <div className="min-h-screen bg-background flex justify-center items-start py-10 px-4">

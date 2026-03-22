@@ -4,6 +4,7 @@ export function ActivityTab() {
   const { account } = useDemoAccount();
   const transactions = account.ledger;
 
+export function ActivityTab({ transactions }: { transactions: Transaction[] }) {
   return (
     <div className="animate-fade-up">
       <div className="bg-card rounded-2xl overflow-hidden shadow-sm">

@@ -1,20 +1,13 @@
-import { useState } from "react";
-import { managedFunds, type Fund } from "@/data/kesemData";
-import { useDemoAccount } from "@/context/DemoAccountContext";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-
-function generateGrowthData(expectedLow: number, months = 12, startValue = 1000) {
-  const data = [];
-  let value = startValue;
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  for (let i = 0; i < months; i++) {
-    const monthlyReturn = expectedLow / 100 / 12;
-    const noise = (Math.random() - 0.45) * (monthlyReturn * 1.8);
-    value = value * (1 + monthlyReturn + noise);
-    data.push({ month: monthNames[i], value: parseFloat(value.toFixed(0)) });
-  }
-  return data;
-}
+import { useMemo, useState } from "react";
+import { buildProjectedGrowthSeries, managedFunds, type Fund } from "@/data/kesemData";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 function AllocationBar({ allocation }: { allocation: Fund["allocation"] }) {
   return <div className="flex rounded-md overflow-hidden h-1.5 gap-0.5">{allocation.map((a) => <div key={a.label} style={{ flex: a.pct, background: a.color }} />)}</div>;
@@ -68,6 +61,9 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
                   <p className="text-[15px] font-bold" style={{ color: fund.color }}>{fund.expectedReturn}</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">est. / yr</p>
                 </div>
+                <p className="text-xs text-muted-foreground max-w-[210px] leading-relaxed">
+                  {fund.description}
+                </p>
               </div>
 
               <div className="mb-3" style={{ height: 70 }}>
@@ -81,6 +77,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+            </div>
 
               <AllocationBar allocation={fund.allocation} />
               <div className="flex gap-3 mt-2.5 mb-3.5 flex-wrap">{fund.allocation.map((a) => <div key={a.label} className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full" style={{ background: a.color }} /><span className="text-[10px] text-muted-foreground">{a.label} {a.pct}%</span></div>)}</div>
@@ -89,9 +86,15 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
                 <div className="flex items-center gap-1.5"><span className="text-xs text-muted-foreground">Risk</span><RiskDots risk={fund.risk} color={fund.color} /></div>
                 <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ color: fund.color, background: fund.color + "18" }}>{position ? `₪${position.invested.toLocaleString()} invested` : "Invest →"}</span>
               </div>
+              <span
+                className="text-xs font-semibold px-3 py-1 rounded-full"
+                style={{ color: fund.color, background: fund.color + "18" }}
+              >
+                Invest →
+              </span>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </>
   );
@@ -103,6 +106,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const parsedAmount = parseInt(amount) || 1000;
   const low = parseInt(fund.expectedReturn.split("–")[0]);
   const chartData = generateGrowthData(low, 12, parseInt(amount) || 1000);
   const existingPosition = account.managedPositions.find((item) => item.fundName === fund.name);
