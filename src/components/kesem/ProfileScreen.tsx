@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { mockData } from "@/data/kesemData";
 
 const menuSections = [
@@ -32,20 +34,26 @@ const menuSections = [
 export function ProfileScreen() {
   const [notificationsOn, setNotificationsOn] = useState(true);
   const { kesemCash, portfolio } = mockData;
+  const { currentUser, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    signOut();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="animate-fade-up space-y-5">
-      {/* Profile hero */}
       <div className="bg-card rounded-3xl p-5 shadow-sm flex items-center gap-4">
         <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-white text-2xl font-bold font-display flex-shrink-0">
-          A
+          {currentUser?.initials ?? "K"}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-base font-bold text-foreground">Adin Cohen</p>
-          <p className="text-xs text-muted-foreground mt-0.5">adin@email.com</p>
+          <p className="text-base font-bold text-foreground">{currentUser?.name ?? "Kesem Member"}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{currentUser?.email ?? "member@kesem.app"}</p>
           <div className="flex items-center gap-2 mt-2">
             <span className="bg-primary-wash text-primary-mid text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
-              Verified ✓
+              {currentUser?.mode === "demo" ? "Demo Mode" : "Verified ✓"}
             </span>
             <span className="bg-secondary text-muted-foreground text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
               Balanced investor
@@ -57,12 +65,11 @@ export function ProfileScreen() {
         </button>
       </div>
 
-      {/* Stats strip */}
       <div className="grid grid-cols-3 gap-2">
         {[
           { label: "Portfolio", value: `₪${(portfolio.total / 1000).toFixed(1)}K` },
           { label: "Cash balance", value: `₪${(kesemCash.balance / 1000).toFixed(1)}K` },
-          { label: "Member since", value: "Jan 2023" },
+          { label: "Member since", value: currentUser?.memberSince ?? "Recently" },
         ].map((s) => (
           <div key={s.label} className="bg-card rounded-2xl p-3 text-center shadow-sm">
             <p className="text-sm font-bold text-foreground">{s.value}</p>
@@ -71,7 +78,6 @@ export function ProfileScreen() {
         ))}
       </div>
 
-      {/* Notifications toggle */}
       <div className="bg-card rounded-2xl px-5 py-4 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-lg">🔔</span>
@@ -92,7 +98,6 @@ export function ProfileScreen() {
         </button>
       </div>
 
-      {/* Menu sections */}
       {menuSections.map((section) => (
         <div key={section.title}>
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2">
@@ -117,8 +122,11 @@ export function ProfileScreen() {
         </div>
       ))}
 
-      {/* Log out */}
-      <button className="w-full py-3.5 bg-card text-destructive border border-destructive/20 rounded-2xl text-sm font-semibold hover:bg-destructive/5 transition-colors duration-200 shadow-sm">
+      <button
+        className="w-full py-3.5 bg-card text-destructive border border-destructive/20 rounded-2xl text-sm font-semibold hover:bg-destructive/5 transition-colors duration-200 shadow-sm"
+        onClick={handleLogout}
+        type="button"
+      >
         Log out
       </button>
 
