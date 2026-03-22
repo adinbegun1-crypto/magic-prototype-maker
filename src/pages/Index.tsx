@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { PortfolioBar } from "@/components/kesem/PortfolioBar";
 import { PortfolioTab } from "@/components/kesem/PortfolioTab";
 import { ManagedTab } from "@/components/kesem/ManagedTab";
@@ -9,17 +8,7 @@ import { AdviceTab } from "@/components/kesem/AdviceTab";
 import { ProfileScreen } from "@/components/kesem/ProfileScreen";
 import { KesemCashCard } from "@/components/kesem/KesemCashCard";
 import { StockSearch } from "@/components/kesem/StockSearch";
-import {
-  getCurrentDemoUser,
-  getUserInitials,
-  listDemoUsers,
-  resetDemoUser,
-  signInDemoUser,
-  signOutDemoUser,
-  signUpDemoUser,
-  updateDemoUser,
-  type DemoUserRecord,
-} from "@/lib/demoAccountStorage";
+import { DemoAccountProvider, useDemoAccount } from "@/context/DemoAccountContext";
 
 const TABS = ["Portfolio", "Managed", "Savings", "Activity", "Stocks"] as const;
 type Tab = (typeof TABS)[number];
@@ -35,150 +24,10 @@ const BOTTOM_NAV: { icon: string; label: string; screen: Screen }[] = [
   { icon: "👤", label: "Profile", screen: "profile" },
 ];
 
-function AuthCard({
-  users,
-  onSignedIn,
-}: {
-  users: DemoUserRecord[];
-  onSignedIn: (user: DemoUserRecord) => void;
-}) {
-  const [mode, setMode] = useState<AuthMode>(users.length > 0 ? "sign-in" : "sign-up");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState(users[0]?.profile.email ?? "");
-
-  function handleSubmit() {
-    try {
-      const nextUser =
-        mode === "sign-up"
-          ? signUpDemoUser(fullName, email)
-          : signInDemoUser(email);
-
-      onSignedIn(nextUser);
-      toast.success(
-        mode === "sign-up"
-          ? `Demo account ready for ${nextUser.profile.fullName}`
-          : `Welcome back, ${nextUser.profile.fullName}`
-      );
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Something went wrong.");
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-background flex justify-center items-center py-10 px-4">
-      <div className="w-full max-w-[390px] space-y-4">
-        <div className="rounded-[32px] bg-primary text-white p-7 shadow-sm overflow-hidden relative">
-          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5" />
-          <div className="absolute -bottom-16 -left-5 w-52 h-52 rounded-full bg-white/[0.03]" />
-          <p className="text-[12px] uppercase tracking-[0.3em] text-white/60 mb-2 relative z-10">Kesem demo</p>
-          <h1 className="font-display text-[30px] leading-tight relative z-10">
-            Make every sign-in feel like a separate investor.
-          </h1>
-          <p className="text-sm text-white/70 mt-3 relative z-10">
-            Create a demo identity with its own portfolio, or sign back into an existing saved account.
-          </p>
-        </div>
-
-        <div className="bg-card rounded-3xl shadow-sm p-5 space-y-4">
-          <div className="flex gap-1 bg-secondary rounded-xl p-1">
-            {[
-              { key: "sign-in", label: "Sign in" },
-              { key: "sign-up", label: "Sign up" },
-            ].map((option) => (
-              <button
-                key={option.key}
-                onClick={() => setMode(option.key as AuthMode)}
-                className="flex-1 py-2 rounded-[10px] text-xs font-medium transition-all duration-200"
-                style={{
-                  color: mode === option.key ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-                  background: mode === option.key ? "white" : "transparent",
-                  boxShadow: mode === option.key ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-
-          {mode === "sign-up" && (
-            <label className="block">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Full name</span>
-              <input
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                placeholder="Adin Cohen"
-                className="mt-1.5 w-full rounded-2xl border border-border bg-secondary px-4 py-3 text-sm text-foreground outline-none focus:border-primary-mid/40"
-              />
-            </label>
-          )}
-
-          <label className="block">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="adin@email.com"
-              className="mt-1.5 w-full rounded-2xl border border-border bg-secondary px-4 py-3 text-sm text-foreground outline-none focus:border-primary-mid/40"
-            />
-          </label>
-
-          {users.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Saved demo accounts</p>
-              <div className="flex flex-wrap gap-2">
-                {users.map((user) => (
-                  <button
-                    key={user.profile.id}
-                    onClick={() => setEmail(user.profile.email)}
-                    className="rounded-full bg-primary-wash px-3 py-1.5 text-xs font-medium text-primary-mid hover:opacity-80"
-                  >
-                    {user.profile.fullName}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={handleSubmit}
-            className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white"
-            style={{ background: "hsl(var(--primary))" }}
-          >
-            {mode === "sign-up" ? "Create demo account" : "Continue to portfolio"}
-          </button>
-
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Demo accounts stay in this browser&apos;s local storage until you explicitly reset one.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function Index() {
+function IndexContent() {
   const [activeTab, setActiveTab] = useState<Tab>("Portfolio");
   const [activeScreen, setActiveScreen] = useState<Screen>("invest");
-  const [currentUser, setCurrentUser] = useState<DemoUserRecord | null>(() => getCurrentDemoUser());
-  const [savedUsers, setSavedUsers] = useState<DemoUserRecord[]>(() => listDemoUsers());
-
-  const initials = useMemo(
-    () => getUserInitials(currentUser?.profile.fullName ?? ""),
-    [currentUser?.profile.fullName]
-  );
-
-  if (!currentUser) {
-    return (
-      <AuthCard
-        users={savedUsers}
-        onSignedIn={(user) => {
-          setCurrentUser(user);
-          setSavedUsers(listDemoUsers());
-        }}
-      />
-    );
-  }
+  const { account, portfolioBreakdown, stockPortfolioChange, stockPortfolioChangePct, stockPortfolioTotal } = useDemoAccount();
 
   const { portfolio, kesemCash, transactions, savings, profile } = currentUser;
   const firstName = profile.fullName.split(" ")[0];
@@ -218,27 +67,19 @@ export default function Index() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <p className="text-[13px] text-muted-foreground tracking-widest uppercase mb-0.5">
-              {activeScreen === "invest"
-                ? "Good morning"
-                : activeScreen === "cash"
-                  ? "Kesem Cash"
-                  : activeScreen === "advice"
-                    ? "Your Insights"
-                    : "Your Account"}
+              {activeScreen === "invest" ? "Good morning" : activeScreen === "cash" ? "Kesem Cash" : activeScreen === "advice" ? "Your Insights" : "Your Account"}
             </p>
             <h1 className="font-display text-[22px] text-foreground">
               {activeScreen === "invest"
-                ? `${firstName} 👋`
+                ? "Adin 👋"
                 : activeScreen === "cash"
-                  ? `₪${kesemCash.balance.toLocaleString("en-IL", { minimumFractionDigits: 2 })}`
+                  ? `₪${account.cashAccount.balance.toLocaleString("en-IL", { minimumFractionDigits: 2 })}`
                   : activeScreen === "advice"
                     ? "What's new 🔍"
-                    : profile.fullName}
+                    : "Adin Cohen"}
             </h1>
           </div>
-          <div className="w-10 h-10 rounded-full bg-primary-mid text-white flex items-center justify-center text-sm font-semibold">
-            {initials}
-          </div>
+          <div className="w-10 h-10 rounded-full bg-primary-mid text-white flex items-center justify-center text-sm font-semibold">A</div>
         </div>
 
         {showInvest && (
@@ -247,24 +88,22 @@ export default function Index() {
               <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/[0.04]" />
               <div className="absolute -bottom-16 -left-5 w-52 h-52 rounded-full bg-white/[0.03]" />
 
-              <p className="text-[12px] opacity-60 tracking-widest uppercase mb-1.5 relative z-10">
-                {firstName}&apos;s Portfolio
-              </p>
+              <p className="text-[12px] opacity-60 tracking-widest uppercase mb-1.5 relative z-10">Total Portfolio</p>
               <p className="font-display text-[38px] tracking-tight mb-2 relative z-10">
-                ₪{portfolio.total.toLocaleString("en-IL", { minimumFractionDigits: 2 })}
+                ₪{stockPortfolioTotal.toLocaleString("en-IL", { minimumFractionDigits: 2 })}
               </p>
               <div className="flex items-center gap-2 relative z-10">
                 <span className="bg-white/10 text-primary-pale text-xs font-semibold px-3 py-1 rounded-full">
-                  +₪{portfolio.change.toLocaleString()} ({portfolio.changePct}%)
+                  {stockPortfolioChange >= 0 ? "+" : "-"}₪{Math.abs(stockPortfolioChange).toLocaleString("en-IL", { maximumFractionDigits: 0 })} ({stockPortfolioChangePct.toFixed(2)}%)
                 </span>
-                <span className="text-xs opacity-50">this month</span>
+                <span className="text-xs opacity-50">based on current holdings</span>
               </div>
 
               <div className="mt-6 relative z-10">
-                <PortfolioBar items={portfolio.breakdown} />
+                <PortfolioBar items={portfolioBreakdown} />
               </div>
-              <div className="flex gap-3 mt-3 relative z-10">
-                {portfolio.breakdown.map((item) => (
+              <div className="flex gap-3 mt-3 relative z-10 flex-wrap">
+                {portfolioBreakdown.map((item) => (
                   <div key={item.ticker} className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full" style={{ background: item.color }} />
                     <span className="text-[10px] opacity-60">{item.ticker}</span>
@@ -290,41 +129,17 @@ export default function Index() {
               ))}
             </div>
 
-            {activeTab === "Portfolio" && <PortfolioTab portfolio={portfolio} />}
+            {activeTab === "Portfolio" && <PortfolioTab />}
             {activeTab === "Managed" && <ManagedTab />}
-            {activeTab === "Savings" && (
-              <SavingsTab
-                savings={savings}
-                kesemCash={kesemCash}
-                onSavingsChange={(nextSavings) =>
-                  updateCurrentUser((user) => ({
-                    ...user,
-                    savings: nextSavings,
-                  }))
-                }
-              />
-            )}
-            {activeTab === "Activity" && <ActivityTab transactions={transactions} />}
+            {activeTab === "Savings" && <SavingsTab />}
+            {activeTab === "Activity" && <ActivityTab />}
             {activeTab === "Stocks" && <StockSearch />}
           </>
         )}
 
-        {activeScreen === "cash" && (
-          <KesemCashCard kesemCash={kesemCash} transactions={transactions} />
-        )}
-
+        {activeScreen === "cash" && <KesemCashCard />}
         {activeScreen === "advice" && <AdviceTab />}
-
-        {activeScreen === "profile" && (
-          <ProfileScreen
-            profile={profile}
-            portfolio={portfolio}
-            kesemCash={kesemCash}
-            initials={initials}
-            onLogout={handleLogout}
-            onResetAccount={handleResetAccount}
-          />
-        )}
+        {activeScreen === "profile" && <ProfileScreen />}
 
         <div className="flex justify-around bg-card rounded-3xl py-3.5 mt-6 shadow-[0_-2px_20px_rgba(0,0,0,0.05)]">
           {BOTTOM_NAV.map(({ icon, label, screen }) => {
@@ -347,5 +162,13 @@ export default function Index() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Index() {
+  return (
+    <DemoAccountProvider>
+      <IndexContent />
+    </DemoAccountProvider>
   );
 }
